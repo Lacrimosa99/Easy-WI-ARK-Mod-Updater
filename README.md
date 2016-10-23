@@ -1,2 +1,2 @@
-# Easy-WI_ARK_Mod_Updater
-Updater for Easy-WI_ARK_Mod_Manager
+# Easy-WI-ARK-Mod-Updater
+Updater for Easy-WI-ARK-Mod-Manager
