@@ -3,11 +3,6 @@
 # Webinterface User
 MASTERSERVER_USER="unknown_user"
 
-# Steam Login Data
-# empty Field to use anonymous User
-STEAM_USERNAME=
-STEAM_PASSWD=
-
 # E-Mail Modul
 # deactivate E-Mail Support with empty EMAIL_TO Field
 EMAIL_TO=
@@ -107,11 +102,8 @@ UPDATE() {
 							su "$MASTERSERVER_USER" -c "mkdir -p "$STEAM_CONTENT_PATH""
 							su "$MASTERSERVER_USER" -c "mkdir -p "$STEAM_DOWNLOAD_PATH""
 						fi
-						if ([ ! "$STEAM_USERNAME" = "" ] && [ ! "$STEAM_PASSWD" = "" ]); then
-							RESULT=$(su "$MASTERSERVER_USER" -c "$STEAM_CMD_PATH +login $STEAM_USERNAME $STEAM_PASSWD +workshop_download_item $ARK_APP_ID $MODID validate +quit" | egrep "Success" | cut -c 1-7)
-						else
-							RESULT=$(su "$MASTERSERVER_USER" -c "$STEAM_CMD_PATH +login anonymous +workshop_download_item $ARK_APP_ID $MODID validate +quit" | egrep "Success" | cut -c 1-7)
-						fi
+
+						RESULT=$(su "$MASTERSERVER_USER" -c "$STEAM_CMD_PATH +login anonymous +workshop_download_item $ARK_APP_ID $MODID validate +quit" | egrep "Success" | cut -c 1-7)
 
 						if [ "$RESULT" == "Success" ]; then
 							echo >> "$INSTALL_LOG"
