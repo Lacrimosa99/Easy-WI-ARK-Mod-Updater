@@ -13,6 +13,7 @@ SUBJECT="ARK Mod-ID failure detected on $(hostname)"
 ######## from here nothing change ########
 ##########################################
 
+CURRENT_VERSION="1.1"
 ARK_APP_ID="346110"
 STEAM_MASTER_PATH="/home/$MASTERSERVER_USER/masterserver/steamCMD"
 STEAM_CMD_PATH="$STEAM_MASTER_PATH/steamcmd.sh"
@@ -25,35 +26,59 @@ MOD_BACKUP_LOG=""$LOG_PATH"/ark_mod_id_backup.log"
 INSTALL_LOG=""$LOG_PATH"/ark_mod_update_status_$(date +"%d-%m-%Y").log"
 DEPRECATED_LOG=""$LOG_PATH"/ark_mod_deprecated_$(date +"%d-%m-%Y").log"
 TMP_PATH="/home/"$MASTERSERVER_USER"/temp"
+EMAIL_TMP_MESSAGE=""$TMP_PATH"/emailtmpmessage.txt"
 EMAIL_MESSAGE=""$TMP_PATH"/emailmessage.txt"
 DEAD_MOD="depreciated|deprecated|outdated|brocken|not-supported|mod-is-dead|no-longer-supported|old|discontinued"
 
-USERCHECK() {
+PRE_CHECK() {
+	VERSION_CHECK
+	USER_CHECK
+	sleep 2
+	SCREEN_CHECK="screen -list | grep ARK_Updater"
+	if [ ! -f "$TMP_PATH"/ark_mod_updater_status ]; then
+		UPDATE
+	else
+		redMessage "Updater is currently running... please try again later." >> "$INSTALL_LOG"
+		echo >> "$INSTALL_LOG"
+		yellowMessage "Thanks for using this script and have a nice Day." >> "$INSTALL_LOG"
+		exit
+	fi
+}
+
+VERSION_CHECK() {
+	LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/Lacrimosa99/Easy-WI-ARK-Mod-Updater/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9]\.[0-9])'`
+
+	if [ "`printf "${LATEST_VERSION}\n${CURRENT_VERSION}" | sort -V | tail -n 1`" != "$CURRENT_VERSION" ]; then
+		echo "You are using the old script version ${CURRENT_VERSION}."	>> "$INSTALL_LOG"
+		echo "Please upgrade to version ${LATEST_VERSION} over the ark_mod_manager.sh Script and retry."	>> "$INSTALL_LOG"
+		FINISHED
+	fi
+}
+
+USER_CHECK() {
 	echo; echo
 	if [ ! "$MASTERSERVER_USER" = "" ]; then
 		USER_CHECK=$(cut -d: -f6,7 /etc/passwd | grep "$MASTERSERVER_USER")
 		if [ ! "$USER_CHECK" == "/home/$MASTERSERVER_USER:/bin/bash" ] && [ ! "$USER_CHECK" == "/home/$MASTERSERVER_USER/:/bin/bash" ]; then
-			redMessage "User $MASTERSERVER_USER not found or wrong shell rights!" >> "$INSTALL_LOG"
-			redMessage "Please check the Masteruser inside this Script or the user shell rights." >> "$INSTALL_LOG"
+			echo "User $MASTERSERVER_USER not found or wrong shell rights!" >> "$INSTALL_LOG"
+			echo "Please check the Masteruser inside this Script or the user shell rights." >> "$INSTALL_LOG"
 			FINISHED
 		fi
 		if [ ! -d "$ARK_MOD_PATH" ]; then
-			redMessage "masteraddons Directory not found!" >> "$INSTALL_LOG"
+			echo "masteraddons Directory not found!" >> "$INSTALL_LOG"
 			FINISHED
 		fi
 		if [ ! -f "$STEAM_CMD_PATH" ]; then
-			redMessage "Steam installation not found!" >> "$INSTALL_LOG"
+			echo "Steam installation not found!" >> "$INSTALL_LOG"
 			FINISHED
 		fi
 	else
-		redMessage 'Variable "MASTERSERVER_USER" are empty!' >> "$INSTALL_LOG"
+		echo 'Variable "MASTERSERVER_USER" are empty!' >> "$INSTALL_LOG"
 		FINISHED
 	fi
 }
 
 UPDATE() {
-	USERCHECK
-
 	if [ ! -f "$TMP_PATH"/ark_mod_updater_status ]; then
 		touch "$TMP_PATH"/ark_mod_updater_status
 	else
