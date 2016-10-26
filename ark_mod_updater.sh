@@ -13,7 +13,7 @@ SUBJECT="ARK Mod-ID failure detected on $(hostname)"
 ######## from here nothing change ########
 ##########################################
 
-CURRENT_VERSION="1.1"
+CURRENT_UPDATER_VERSION="1.1"
 ARK_APP_ID="346110"
 STEAM_MASTER_PATH="/home/$MASTERSERVER_USER/masterserver/steamCMD"
 STEAM_CMD_PATH="$STEAM_MASTER_PATH/steamcmd.sh"
@@ -46,11 +46,11 @@ PRE_CHECK() {
 }
 
 VERSION_CHECK() {
-	LATEST_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/Lacrimosa99/Easy-WI-ARK-Mod-Updater/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9]\.[0-9])'`
+	LATEST_UPDATER_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/Lacrimosa99/Easy-WI-ARK-Mod-Updater/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9])'`
 
-	if [ "`printf "${LATEST_VERSION}\n${CURRENT_VERSION}" | sort -V | tail -n 1`" != "$CURRENT_VERSION" ]; then
-		echo "You are using the old script version ${CURRENT_VERSION}."	>> "$INSTALL_LOG"
-		echo "Please upgrade to version ${LATEST_VERSION} over the ark_mod_manager.sh Script and retry."	>> "$INSTALL_LOG"
+	if [ "`printf "${LATEST_UPDATER_VERSION}\n${CURRENT_UPDATER_VERSION}" | sort -V | tail -n 1`" != "$CURRENT_UPDATER_VERSION" ]; then
+		echo "You are using the old script version ${CURRENT_UPDATER_VERSION}."	>> "$INSTALL_LOG"
+		echo "Please upgrade to version ${LATEST_UPDATER_VERSION} over the ark_mod_manager.sh Script and retry."	>> "$INSTALL_LOG"
 		FINISHED
 	fi
 }
