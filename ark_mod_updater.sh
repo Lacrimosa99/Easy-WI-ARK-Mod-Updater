@@ -13,7 +13,7 @@ SUBJECT="ARK Mod-ID failure detected on $(hostname)"
 ######## from here nothing change ########
 ##########################################
 
-CURRENT_UPDATER_VERSION="1.1"
+CURRENT_UPDATER_VERSION="1.2"
 ARK_APP_ID="346110"
 STEAM_MASTER_PATH="/home/$MASTERSERVER_USER/masterserver/steamCMD"
 STEAM_CMD_PATH="$STEAM_MASTER_PATH/steamcmd.sh"
@@ -58,8 +58,8 @@ VERSION_CHECK() {
 USER_CHECK() {
 	echo; echo
 	if [ ! "$MASTERSERVER_USER" = "" ]; then
-		USER_CHECK=$(cut -d: -f6,7 /etc/passwd | grep "$MASTERSERVER_USER")
-		if [ ! "$USER_CHECK" == "/home/$MASTERSERVER_USER:/bin/bash" ] && [ ! "$USER_CHECK" == "/home/$MASTERSERVER_USER/:/bin/bash" ]; then
+		USER_CHECK=$(cut -d: -f6,7 /etc/passwd | grep "$MASTERSERVER_USER" | head -n1)
+		if ([ ! "$USER_CHECK" == "/home/$MASTERSERVER_USER:/bin/bash" -a ! "$USER_CHECK" == "/home/$MASTERSERVER_USER/:/bin/bash" ]); then
 			echo "User $MASTERSERVER_USER not found or wrong shell rights!" >> "$INSTALL_LOG"
 			echo "Please check the Masteruser inside this Script or the user shell rights." >> "$INSTALL_LOG"
 			FINISHED
