@@ -3,5 +3,5 @@ Updater for Easy-WI-ARK-Mod-Manager
 
 ---
 
-Please use only the ARK-Mod-Manager for all!
+Please use only the ARK-Mod-Manager for all!<br>
 This Script is only run with the ARK-Mod-Manager Script.
