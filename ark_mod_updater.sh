@@ -13,7 +13,7 @@ SUBJECT="ARK Mod-ID failure detected on $(hostname)"
 ######## from here nothing change ########
 ##########################################
 
-CURRENT_UPDATER_VERSION="1.3"
+CURRENT_UPDATER_VERSION="1.2"
 ARK_APP_ID="346110"
 STEAM_MASTER_PATH="/home/$MASTERSERVER_USER/masterserver/steamCMD"
 STEAM_CMD_PATH="$STEAM_MASTER_PATH/steamcmd.sh"
@@ -164,8 +164,8 @@ UPDATE() {
 					CLEANFILES
 					FINISHED
 				fi
-				if [ "$ARK_MOD_NAME_DEPRECATED" = "" ]; then
-					if [ -d "$ARK_MOD_PATH"/ark_"$MODID" ]; then
+				if [ -d "$ARK_MOD_PATH"/ark_"$MODID" ]; then
+					if [ "$ARK_MOD_NAME_DEPRECATED" = "" ]; then
 						if [ -f "$MOD_LOG" ]; then
 							local MOD_TMP_NAME=$(cat "$MOD_LOG" | grep "$MODID" )
 						fi
@@ -175,23 +175,23 @@ UPDATE() {
 						chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$ARK_MOD_PATH"/ark_"$MODID" 2>&1 >/dev/null
 						sed -i "/$MODID/d" "$TMP_PATH"/ark_mod_id_tmp.log
 					else
-						echo "Mod $ARK_MOD_NAME_NORMAL in the masteraddons Folder has not been installed!" >> "$INSTALL_LOG"
-						echo "Update canceled!" >> "$INSTALL_LOG"
-						CLEANFILES
-						FINISHED
+						if [ ! -f "$MOD_NO_UPDATE_LOG" ]; then
+							touch "$MOD_NO_UPDATE_LOG"
+						else
+							if [ $(local MOD_TMP_NAME=$(cat "$MOD_NO_UPDATE_LOG" | grep "$MODID" )) = "" ]; then
+								echo "$MODID" >> "$MOD_NO_UPDATE_LOG"
+							fi
+						fi
+						sed -i "/$MODID/d" "$MOD_BACKUP_LOG"
+						echo | tee -a "$INSTALL_LOG" "$DEPRECATED_LOG"
+						echo "Mod $ARK_MOD_NAME_NORMAL with ModID "$MODID" are not more Supported and deactivated for Updater!" | tee -a "$INSTALL_LOG" "$DEPRECATED_LOG"
+						echo 'You can self deinstall from Disk over the "ark_mod_manager.sh".' | tee -a "$INSTALL_LOG" "$DEPRECATED_LOG"
 					fi
 				else
-					if [ ! -f "$MOD_NO_UPDATE_LOG" ]; then
-						touch "$MOD_NO_UPDATE_LOG"
-					else
-						if [ $(local MOD_TMP_NAME=$(cat "$MOD_NO_UPDATE_LOG" | grep "$MODID" )) = "" ]; then
-							echo "$MODID" >> "$MOD_NO_UPDATE_LOG"
-						fi
-					fi
-					sed -i "/$MODID/d" "$MOD_BACKUP_LOG"
-					echo | tee -a "$INSTALL_LOG" "$DEPRECATED_LOG"
-					echo "Mod $ARK_MOD_NAME_NORMAL with ModID "$MODID" are not more Supported and deactivated for Updater!" | tee -a "$INSTALL_LOG" "$DEPRECATED_LOG"
-					echo 'You can self deinstall from Disk over the "ark_mod_manager.sh".' | tee -a "$INSTALL_LOG" "$DEPRECATED_LOG"
+					echo "Mod $ARK_MOD_NAME_NORMAL in the masteraddons Folder has not been installed!" >> "$INSTALL_LOG"
+					echo "Update canceled!" >> "$INSTALL_LOG"
+					CLEANFILES
+					FINISHED
 				fi
 			else
 				echo >> "$INSTALL_LOG"
