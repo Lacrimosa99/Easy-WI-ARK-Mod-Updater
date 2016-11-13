@@ -13,7 +13,7 @@ SUBJECT="ARK Mod-ID failure detected on $(hostname)"
 ######## from here nothing change ########
 ##########################################
 
-CURRENT_UPDATER_VERSION="1.2"
+CURRENT_UPDATER_VERSION="1.3"
 ARK_APP_ID="346110"
 STEAM_MASTER_PATH="/home/$MASTERSERVER_USER/masterserver/steamCMD"
 STEAM_CMD_PATH="$STEAM_MASTER_PATH/steamcmd.sh"
@@ -25,6 +25,7 @@ MOD_LOG=""$LOG_PATH"/ark_mod_id.log"
 MOD_BACKUP_LOG=""$LOG_PATH"/ark_mod_id_backup.log"
 INSTALL_LOG=""$LOG_PATH"/ark_mod_update_status_$(date +"%d-%m-%Y").log"
 DEPRECATED_LOG=""$LOG_PATH"/ark_mod_deprecated_$(date +"%d-%m-%Y").log"
+MOD_NO_UPDATE_LOG=""$LOG_PATH"/ark_mod_id_no_update.log"
 TMP_PATH="/home/"$MASTERSERVER_USER"/temp"
 EMAIL_TMP_MESSAGE=""$TMP_PATH"/emailtmpmessage.txt"
 EMAIL_MESSAGE=""$TMP_PATH"/emailmessage.txt"
@@ -120,50 +121,50 @@ UPDATE() {
 				fi
 				ARK_MOD_NAME_DEPRECATED=$(echo "$ARK_MOD_NAME" | egrep "$DEAD_MOD")
 
-				if [ "$ARK_MOD_NAME_DEPRECATED" = "" ]; then
-					COUNTER=0
-					while [ $COUNTER -lt 4 ]; do
-						if [ ! -d "$STEAM_CONTENT_PATH" -o ! -d "$STEAM_DOWNLOAD_PATH" ]; then
-							su "$MASTERSERVER_USER" -c "mkdir -p "$STEAM_CONTENT_PATH""
-							su "$MASTERSERVER_USER" -c "mkdir -p "$STEAM_DOWNLOAD_PATH""
-						fi
+				COUNTER=0
+				while [ $COUNTER -lt 4 ]; do
+					if [ ! -d "$STEAM_CONTENT_PATH" -o ! -d "$STEAM_DOWNLOAD_PATH" ]; then
+						su "$MASTERSERVER_USER" -c "mkdir -p "$STEAM_CONTENT_PATH""
+						su "$MASTERSERVER_USER" -c "mkdir -p "$STEAM_DOWNLOAD_PATH""
+					fi
 
-						RESULT=$(su "$MASTERSERVER_USER" -c "$STEAM_CMD_PATH +login anonymous +workshop_download_item $ARK_APP_ID $MODID validate +quit" | egrep "Success" | cut -c 1-7)
+					RESULT=$(su "$MASTERSERVER_USER" -c "$STEAM_CMD_PATH +login anonymous +workshop_download_item $ARK_APP_ID $MODID validate +quit" | egrep "Success" | cut -c 1-7)
 
-						if [ "$RESULT" == "Success" ]; then
+					if [ "$RESULT" == "Success" ]; then
+						echo >> "$INSTALL_LOG"
+						echo "$ARK_MOD_NAME_NORMAL" >> "$INSTALL_LOG"
+						echo "$MODID" >> "$INSTALL_LOG"
+						echo "Steam Download Status: $RESULT" >> "$INSTALL_LOG"
+						echo "Connection Attempts: $COUNTER" >> "$INSTALL_LOG"
+						break
+					else
+						if [ "$COUNTER" = "3" ]; then
 							echo >> "$INSTALL_LOG"
 							echo "$ARK_MOD_NAME_NORMAL" >> "$INSTALL_LOG"
 							echo "$MODID" >> "$INSTALL_LOG"
-							echo "Steam Download Status: $RESULT" >> "$INSTALL_LOG"
-							echo "Connection Attempts: $COUNTER" >> "$INSTALL_LOG"
+							echo "Steam Download Status: FAILED" >> "$INSTALL_LOG"
+							rm -rf "$MOD_LOG"
+							cp "$MOD_BACKUP_LOG" "$MOD_LOG"
+							CLEANFILES
 							break
 						else
-							if [ "$COUNTER" = "3" ]; then
-								echo >> "$INSTALL_LOG"
-								echo "$ARK_MOD_NAME_NORMAL" >> "$INSTALL_LOG"
-								echo "$MODID" >> "$INSTALL_LOG"
-								echo "Steam Download Status: FAILED" >> "$INSTALL_LOG"
-								rm -rf "$MOD_LOG"
-								cp "$MOD_BACKUP_LOG" "$MOD_LOG"
-								CLEANFILES
-								break
-							else
-								rm -rf $STEAM_CONTENT_PATH/*
-								rm -rf $STEAM_DOWNLOAD_PATH/*
-								let COUNTER=$COUNTER+1
-							fi
+							rm -rf $STEAM_CONTENT_PATH/*
+							rm -rf $STEAM_DOWNLOAD_PATH/*
+							let COUNTER=$COUNTER+1
 						fi
-					done
-
-					if [ -d "$STEAM_CONTENT_PATH"/"$MODID" ]; then
-						rm -rf "$ARK_MOD_PATH"/ark_"$MODID"/ShooterGame/Content/Mods/"$MODID"/ 2>&1 >/dev/null
-						DECOMPRESS
-					else
-						echo "Mod Name $MODID in the Steam Content Folder not found!" >> "$INSTALL_LOG"
-						echo "Update canceled!" >> "$INSTALL_LOG"
-						CLEANFILES
-						FINISHED
 					fi
+				done
+
+				if [ -d "$STEAM_CONTENT_PATH"/"$MODID" ]; then
+					rm -rf "$ARK_MOD_PATH"/ark_"$MODID"/ShooterGame/Content/Mods/"$MODID"/ 2>&1 >/dev/null
+					DECOMPRESS
+				else
+					echo "Mod Name $MODID in the Steam Content Folder not found!" >> "$INSTALL_LOG"
+					echo "Update canceled!" >> "$INSTALL_LOG"
+					CLEANFILES
+					FINISHED
+				fi
+				if [ "$ARK_MOD_NAME_DEPRECATED" = "" ]; then
 					if [ -d "$ARK_MOD_PATH"/ark_"$MODID" ]; then
 						if [ -f "$MOD_LOG" ]; then
 							local MOD_TMP_NAME=$(cat "$MOD_LOG" | grep "$MODID" )
@@ -180,8 +181,12 @@ UPDATE() {
 						FINISHED
 					fi
 				else
-					if [ ! -f "$DEPRECATED_LOG" ]; then
-						touch "$DEPRECATED_LOG"
+					if [ ! -f "$MOD_NO_UPDATE_LOG" ]; then
+						touch "$MOD_NO_UPDATE_LOG"
+					else
+						if [ $(local MOD_TMP_NAME=$(cat "$MOD_NO_UPDATE_LOG" | grep "$MODID" )) = "" ]; then
+							echo "$MODID" >> "$MOD_NO_UPDATE_LOG"
+						fi
 					fi
 					sed -i "/$MODID/d" "$MOD_BACKUP_LOG"
 					echo | tee -a "$INSTALL_LOG" "$DEPRECATED_LOG"
