@@ -1,9 +1,12 @@
 #!/bin/bash
 
-# Webinterface User
+# Debug Modus
+DEBUG="ON"
+
+# Easy-WI Masterserver User
 MASTERSERVER_USER="unknown_user"
 
-# E-Mail Modul
+# E-Mail Modul for Autoupdater
 # deactivate E-Mail Support with empty EMAIL_TO Field
 EMAIL_TO=
 SUBJECT="ARK Mod-ID failure detected on $(hostname)"
@@ -35,7 +38,6 @@ PRE_CHECK() {
 	VERSION_CHECK
 	USER_CHECK
 	sleep 2
-	SCREEN_CHECK="screen -list | grep ARK_Updater"
 	if [ ! -f "$TMP_PATH"/ark_mod_updater_status ]; then
 		UPDATE
 	else
@@ -97,11 +99,10 @@ UPDATE() {
 		if [ -f "$MOD_BACKUP_LOG" ]; then
 			rm -rf "$MOD_BACKUP_LOG"
 		fi
-
-		cp "$MOD_LOG" "$TMP_PATH"/ark_mod_id_tmp.log
+		cp "$MOD_LOG" "$TMP_PATH"/ark_custom_appid_tmp.log
 		mv "$MOD_LOG" "$MOD_BACKUP_LOG"
 	elif [ -f "$MOD_BACKUP_LOG" ]; then
-		cp "$MOD_BACKUP_LOG" "$TMP_PATH"/ark_mod_id_tmp.log
+		cp "$MOD_BACKUP_LOG" "$TMP_PATH"/ark_custom_appid_tmp.log
 	else
 		echo 'File "ark_mod_id.log" in /logs not found!' >> "$INSTALL_LOG"
 		echo "Update canceled!" >> "$INSTALL_LOG"
@@ -109,8 +110,27 @@ UPDATE() {
 		FINISHED
 	fi
 
-	if [ -f "$TMP_PATH"/ark_mod_id_tmp.log ]; then
-		for MODID in `cat "$TMP_PATH"/ark_mod_id_tmp.log`; do
+	if [ -f "$TMP_PATH"/ark_custom_appid_tmp.log ]; then
+		ARK_MOD_ID=$(cat "$TMP_PATH"/ark_custom_appid_tmp.log)
+		INSTALL_CHECK
+	else
+		echo "TMP Log in /temp not found!" >> "$INSTALL_LOG"
+		echo "Update canceled!" >> "$INSTALL_LOG"
+	fi
+
+	if [ -f "$TMP_PATH"/ark_update_failure.log ]; then
+		CLEANFILES
+		sleep 120
+		COUNTER=0
+		unset ARK_MOD_ID
+		ARK_MOD_ID=$(cat "$TMP_PATH"/ark_update_failure.log)
+		INSTALL_CHECK
+	fi
+	FINISHED
+}
+
+INSTALL_CHECK() {
+		for MODID in ${ARK_MOD_ID[@]}; do
 			ARK_MOD_NAME_NORMAL=$(curl -s "http://steamcommunity.com/sharedfiles/filedetails/?id=$MODID" | sed -n 's|^.*<div class="workshopItemTitle">\([^<]*\)</div>.*|\1|p')
 			if [ ! "$ARK_MOD_NAME_NORMAL" = "" ]; then
 				ARK_MOD_NAME_TMP=$(echo "$ARK_MOD_NAME_NORMAL" | egrep "Difficulty|ItemTweaks|NPC")
@@ -131,6 +151,12 @@ UPDATE() {
 					RESULT=$(su "$MASTERSERVER_USER" -c "$STEAM_CMD_PATH +login anonymous +workshop_download_item $ARK_APP_ID $MODID validate +quit" | egrep "Success" | cut -c 1-7)
 
 					if [ "$RESULT" == "Success" ]; then
+						if [ -f "$TMP_PATH"/ark_update_failure.log ]; then
+							local TMP_ID=$(cat "$TMP_PATH"/ark_update_failure.log | grep "$MODID")
+							if [ "$TMP_ID" = "" ]; then
+								sed -i "/$MODID/d" "$TMP_PATH"/ark_update_failure.log
+							fi
+						fi
 						echo >> "$INSTALL_LOG"
 						echo "$ARK_MOD_NAME_NORMAL" >> "$INSTALL_LOG"
 						echo "$MODID" >> "$INSTALL_LOG"
@@ -143,14 +169,20 @@ UPDATE() {
 							echo "$ARK_MOD_NAME_NORMAL" >> "$INSTALL_LOG"
 							echo "$MODID" >> "$INSTALL_LOG"
 							echo "Steam Download Status: FAILED" >> "$INSTALL_LOG"
-							rm -rf "$MOD_LOG"
-							cp "$MOD_BACKUP_LOG" "$MOD_LOG"
-							CLEANFILES
+							if [ ! -f "$TMP_PATH"/ark_update_failure.log ]; then
+								touch "$TMP_PATH"/ark_update_failure.log
+							fi
+							local TMP_ID=$(cat "$TMP_PATH"/ark_update_failure.log | grep "$MODID")
+							if [ "$TMP_ID" = "" ]; then
+								echo "$MODID" >> "$TMP_PATH"/ark_update_failure.log
+							fi
+							sed -i "/$MODID/d" "$TMP_PATH"/ark_custom_appid_tmp.log
 							break
 						else
 							rm -rf $STEAM_CONTENT_PATH/*
 							rm -rf $STEAM_DOWNLOAD_PATH/*
 							let COUNTER=$COUNTER+1
+							sleep 5
 						fi
 					fi
 				done
@@ -160,9 +192,6 @@ UPDATE() {
 					DECOMPRESS
 				else
 					echo "Mod Name $MODID in the Steam Content Folder not found!" >> "$INSTALL_LOG"
-					echo "Update canceled!" >> "$INSTALL_LOG"
-					CLEANFILES
-					FINISHED
 				fi
 				if [ -d "$ARK_MOD_PATH"/ark_"$MODID" ]; then
 					if [ "$ARK_MOD_NAME_DEPRECATED" = "" ]; then
@@ -173,7 +202,7 @@ UPDATE() {
 							echo "$MODID" >> "$MOD_LOG"
 						fi
 						chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$ARK_MOD_PATH"/ark_"$MODID" 2>&1 >/dev/null
-						sed -i "/$MODID/d" "$TMP_PATH"/ark_mod_id_tmp.log
+						sed -i "/$MODID/d" "$TMP_PATH"/ark_custom_appid_tmp.log
 					else
 						if [ ! -f "$MOD_NO_UPDATE_LOG" ]; then
 							touch "$MOD_NO_UPDATE_LOG"
@@ -189,9 +218,6 @@ UPDATE() {
 					fi
 				else
 					echo "Mod $ARK_MOD_NAME_NORMAL in the masteraddons Folder has not been installed!" >> "$INSTALL_LOG"
-					echo "Update canceled!" >> "$INSTALL_LOG"
-					CLEANFILES
-					FINISHED
 				fi
 			else
 				echo >> "$INSTALL_LOG"
@@ -199,12 +225,6 @@ UPDATE() {
 				echo "Please try again later." >> "$INSTALL_LOG"
 			fi
 		done
-	else
-		echo "TMP Log in /temp not found!" >> "$INSTALL_LOG"
-		echo "Update canceled!" >> "$INSTALL_LOG"
-	fi
-	CLEANFILES
-	FINISHED
 }
 
 DECOMPRESS() {
@@ -348,8 +368,8 @@ FINISHED() {
 	fi
 	rm -rf "$EMAIL_MESSAGE" 2>&1 >/dev/null
 
-	if [ -f "$TMP_PATH"/ark_mod_id_tmp.log ]; then
-		rm -rf "$TMP_PATH"/ark_mod_id_tmp.log
+	if [ -f "$TMP_PATH"/ark_custom_appid_tmp.log ]; then
+		rm -rf "$TMP_PATH"/ark_custom_appid_tmp.log
 	fi
 
 	find "$LOG_PATH" -name "ark_mod_update_*" -mtime +5 -exec rm -rf {} \;
@@ -364,8 +384,15 @@ FINISHED() {
 	echo "--------------------- Finished $(date +"%H:%M") ---------------------" >> "$INSTALL_LOG"
 	echo >> "$INSTALL_LOG"
 	echo >> "$INSTALL_LOG"
+	if [ "$DEBUG" == "ON" ]; then
+		set +x
+	fi
 }
+
+if [ "$DEBUG" == "ON" ]; then
+	set -x
+fi
 
 echo >> "$INSTALL_LOG"
 echo "-------------------- Beginn Log $(date +"%H:%M") --------------------" >> "$INSTALL_LOG"
-UPDATE
+PRE_CHECK
