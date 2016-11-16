@@ -374,6 +374,8 @@ FINISHED() {
 		rm -rf "$TMP_PATH"/ark_update_failure.log
 	fi
 
+	CLEANFILES
+
 	find "$LOG_PATH" -name "ark_mod_update_*" -mtime +5 -exec rm -rf {} \;
 	find "$LOG_PATH" -name "ark_mod_deprecated_*" -mtime +30 -exec rm -rf {} \;
 	chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$LOG_PATH"/* 2>&1 >/dev/null
