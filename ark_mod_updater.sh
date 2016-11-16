@@ -191,7 +191,7 @@ INSTALL_CHECK() {
 					rm -rf "$ARK_MOD_PATH"/ark_"$MODID"/ShooterGame/Content/Mods/"$MODID"/ 2>&1 >/dev/null
 					DECOMPRESS
 				else
-					echo "Mod Name $MODID in the Steam Content Folder not found!" >> "$INSTALL_LOG"
+					echo "ModID $MODID in the Steam Content Folder not found!" >> "$INSTALL_LOG"
 				fi
 				if [ -d "$ARK_MOD_PATH"/ark_"$MODID" ]; then
 					if [ "$ARK_MOD_NAME_DEPRECATED" = "" ]; then
@@ -344,13 +344,10 @@ FINISHED() {
 		echo "Error in Logfiles found!" | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
 		echo "Logfile Backup restored" >> "$EMAIL_MESSAGE"
 		echo >> "$EMAIL_MESSAGE"
-		if [ $(stat -c %s "$MOD_LOG") -gt $(stat -c %s "$MOD_BACKUP_LOG") ]; then
-			echo "Following new IDs in Logfiles found:" >> "$EMAIL_MESSAGE"
-		else
-			echo "Following removed IDs in Logfiles found:" >> "$EMAIL_MESSAGE"
-		fi
+		echo "The following IDs were not downloaded:" >> "$EMAIL_MESSAGE"
 		echo >> "$EMAIL_MESSAGE"
-		grep -v -F -f "$MOD_LOG" "$MOD_BACKUP_LOG" >> "$EMAIL_MESSAGE"
+		cat "$TMP_PATH"/ark_update_failure.log >> "$EMAIL_MESSAGE"
+		echo >> "$EMAIL_MESSAGE"
 		cp "$MOD_BACKUP_LOG" "$MOD_LOG"
 	fi
 
@@ -359,6 +356,7 @@ FINISHED() {
 		echo "Hostname: $(hostname)" >> "$EMAIL_MESSAGE"
 		echo "IP: $(ip -4 -o addr show dev eth0 | awk '{split($4,a,"/") ;print a[1]}' | head -n1)"	>> "$EMAIL_MESSAGE"
 		echo >> "$EMAIL_MESSAGE"
+		echo "The following IDs are obsolete and have not been updated:" >> "$EMAIL_MESSAGE"
 		cat "$DEPRECATED_LOG" >> "$EMAIL_MESSAGE"
 		mv "$DEPRECATED_LOG" "$DEPRECATED_LOG"_old
 	fi
@@ -370,6 +368,10 @@ FINISHED() {
 
 	if [ -f "$TMP_PATH"/ark_custom_appid_tmp.log ]; then
 		rm -rf "$TMP_PATH"/ark_custom_appid_tmp.log
+	fi
+
+	if [ -f "$TMP_PATH"/ark_update_failure.log ]; then
+		rm -rf "$TMP_PATH"/ark_update_failure.log
 	fi
 
 	find "$LOG_PATH" -name "ark_mod_update_*" -mtime +5 -exec rm -rf {} \;
