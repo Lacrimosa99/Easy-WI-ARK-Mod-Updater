@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Debug Modus
-DEBUG="ON"
+DEBUG="OFF"
 
 # Easy-WI Masterserver User
 MASTERSERVER_USER="unknown_user"
