@@ -201,10 +201,9 @@ INSTALL_CHECK() {
 					else
 						if [ ! -f "$MOD_NO_UPDATE_LOG" ]; then
 							touch "$MOD_NO_UPDATE_LOG"
-						else
-							if [ $(MOD_TMP_NAME=$(cat "$MOD_NO_UPDATE_LOG" | grep "$MODID" )) = "" ]; then
-								echo "$MODID" >> "$MOD_NO_UPDATE_LOG"
-							fi
+						fi
+						if [ $(MOD_TMP_NAME=$(cat "$MOD_NO_UPDATE_LOG" | grep "$MODID" )) = "" ]; then
+							echo "$MODID" >> "$MOD_NO_UPDATE_LOG"
 						fi
 						sed -i "/$MODID/d" "$MOD_BACKUP_LOG"
 						echo | tee -a "$INSTALL_LOG" "$DEPRECATED_LOG"
