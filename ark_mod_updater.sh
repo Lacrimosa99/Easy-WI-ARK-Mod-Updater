@@ -35,31 +35,16 @@ EMAIL_MESSAGE=""$TMP_PATH"/emailmessage.txt"
 DEAD_MOD="depreciated|deprecated|outdated|brocken|not-supported|mod-is-dead|no-longer-supported|old|discontinued"
 
 PRE_CHECK() {
-	VERSION_CHECK
-	USER_CHECK
-	sleep 2
-	if [ ! -f "$TMP_PATH"/ark_mod_updater_status ]; then
-		UPDATE
-	else
-		redMessage "Updater is currently running... please try again later." >> "$INSTALL_LOG"
-		echo >> "$INSTALL_LOG"
-		yellowMessage "Thanks for using this script and have a nice Day." >> "$INSTALL_LOG"
-		exit
-	fi
-}
+	echo >> "$INSTALL_LOG"
+	echo "-------------------- Beginn Log $(date +"%H:%M") --------------------" >> "$INSTALL_LOG"
 
-VERSION_CHECK() {
 	LATEST_UPDATER_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/Lacrimosa99/Easy-WI-ARK-Mod-Updater/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9])'`
-
 	if [ "`printf "${LATEST_UPDATER_VERSION}\n${CURRENT_UPDATER_VERSION}" | sort -V | tail -n 1`" != "$CURRENT_UPDATER_VERSION" ]; then
 		echo "You are using the old script version ${CURRENT_UPDATER_VERSION}."	>> "$INSTALL_LOG"
 		echo "Please upgrade to version ${LATEST_UPDATER_VERSION} over the ark_mod_manager.sh Script and retry."	>> "$INSTALL_LOG"
 		FINISHED
 	fi
-}
 
-USER_CHECK() {
-	echo; echo
 	if [ ! "$MASTERSERVER_USER" = "" ]; then
 		USER_CHECK=$(cut -d: -f6,7 /etc/passwd | grep "$MASTERSERVER_USER" | head -n1)
 		if ([ ! "$USER_CHECK" == "/home/$MASTERSERVER_USER:/bin/bash" -a ! "$USER_CHECK" == "/home/$MASTERSERVER_USER/:/bin/bash" ]); then
@@ -78,6 +63,16 @@ USER_CHECK() {
 	else
 		echo 'Variable "MASTERSERVER_USER" are empty!' >> "$INSTALL_LOG"
 		FINISHED
+	fi
+	sleep 2
+
+	if [ ! -f "$TMP_PATH"/ark_mod_updater_status ]; then
+		UPDATE
+	else
+		redMessage "Updater is currently running... please try again later." >> "$INSTALL_LOG"
+		echo >> "$INSTALL_LOG"
+		yellowMessage "Thanks for using this script and have a nice Day." >> "$INSTALL_LOG"
+		exit
 	fi
 }
 
@@ -152,7 +147,7 @@ INSTALL_CHECK() {
 
 					if [ "$RESULT" == "Success" ]; then
 						if [ -f "$TMP_PATH"/ark_update_failure.log ]; then
-							local TMP_ID=$(cat "$TMP_PATH"/ark_update_failure.log | grep "$MODID")
+							TMP_ID=$(cat "$TMP_PATH"/ark_update_failure.log | grep "$MODID")
 							if [ "$TMP_ID" = "" ]; then
 								sed -i "/$MODID/d" "$TMP_PATH"/ark_update_failure.log
 							fi
@@ -172,7 +167,7 @@ INSTALL_CHECK() {
 							if [ ! -f "$TMP_PATH"/ark_update_failure.log ]; then
 								touch "$TMP_PATH"/ark_update_failure.log
 							fi
-							local TMP_ID=$(cat "$TMP_PATH"/ark_update_failure.log | grep "$MODID")
+							TMP_ID=$(cat "$TMP_PATH"/ark_update_failure.log | grep "$MODID")
 							if [ "$TMP_ID" = "" ]; then
 								echo "$MODID" >> "$TMP_PATH"/ark_update_failure.log
 							fi
@@ -196,7 +191,7 @@ INSTALL_CHECK() {
 				if [ -d "$ARK_MOD_PATH"/ark_"$MODID" ]; then
 					if [ "$ARK_MOD_NAME_DEPRECATED" = "" ]; then
 						if [ -f "$MOD_LOG" ]; then
-							local MOD_TMP_NAME=$(cat "$MOD_LOG" | grep "$MODID" )
+							MOD_TMP_NAME=$(cat "$MOD_LOG" | grep "$MODID" )
 						fi
 						if [ "$MOD_TMP_NAME" = "" ]; then
 							echo "$MODID" >> "$MOD_LOG"
@@ -207,7 +202,7 @@ INSTALL_CHECK() {
 						if [ ! -f "$MOD_NO_UPDATE_LOG" ]; then
 							touch "$MOD_NO_UPDATE_LOG"
 						else
-							if [ $(local MOD_TMP_NAME=$(cat "$MOD_NO_UPDATE_LOG" | grep "$MODID" )) = "" ]; then
+							if [ $(MOD_TMP_NAME=$(cat "$MOD_NO_UPDATE_LOG" | grep "$MODID" )) = "" ]; then
 								echo "$MODID" >> "$MOD_NO_UPDATE_LOG"
 							fi
 						fi
@@ -335,7 +330,7 @@ CLEANFILES() {
 }
 
 FINISHED() {
-	if ! cmp -s "$MOD_LOG" "$MOD_BACKUP_LOG"; then
+	if [ -f "$TMP_PATH"/ark_update_failure.log ]; then
 		echo | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
 		echo "Date: $(date +%d.%m.%Y_%H:%M)" >> "$EMAIL_MESSAGE"
 		echo "Hostname: $(hostname)" >> "$EMAIL_MESSAGE"
@@ -343,11 +338,11 @@ FINISHED() {
 		echo >> "$EMAIL_MESSAGE"
 		echo "Error in Logfiles found!" | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
 		echo "Logfile Backup restored" >> "$EMAIL_MESSAGE"
-		echo >> "$EMAIL_MESSAGE"
-		echo "The following IDs were not downloaded:" >> "$EMAIL_MESSAGE"
-		echo >> "$EMAIL_MESSAGE"
-		cat "$TMP_PATH"/ark_update_failure.log >> "$EMAIL_MESSAGE"
-		echo >> "$EMAIL_MESSAGE"
+		echo | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
+		echo "The following IDs were not downloaded:" | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
+		echo | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
+		cat "$TMP_PATH"/ark_update_failure.log | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
+		echo | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
 		cp "$MOD_BACKUP_LOG" "$MOD_LOG"
 	fi
 
@@ -355,9 +350,9 @@ FINISHED() {
 		echo "Date: $(date +%d.%m.%Y_%H:%M)" >> "$EMAIL_MESSAGE"
 		echo "Hostname: $(hostname)" >> "$EMAIL_MESSAGE"
 		echo "IP: $(ip -4 -o addr show dev eth0 | awk '{split($4,a,"/") ;print a[1]}' | head -n1)"	>> "$EMAIL_MESSAGE"
-		echo >> "$EMAIL_MESSAGE"
-		echo "The following IDs are obsolete and have not been updated:" >> "$EMAIL_MESSAGE"
-		cat "$DEPRECATED_LOG" >> "$EMAIL_MESSAGE"
+		echo | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
+		echo "The following IDs are obsolete and have not been updated:" | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
+		cat "$DEPRECATED_LOG" | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
 		mv "$DEPRECATED_LOG" "$DEPRECATED_LOG"_old
 	fi
 
@@ -397,6 +392,4 @@ if [ "$DEBUG" == "ON" ]; then
 	set -x
 fi
 
-echo >> "$INSTALL_LOG"
-echo "-------------------- Beginn Log $(date +"%H:%M") --------------------" >> "$INSTALL_LOG"
 PRE_CHECK
