@@ -206,9 +206,9 @@ INSTALL_CHECK() {
 							echo "$MODID" >> "$MOD_NO_UPDATE_LOG"
 						fi
 						sed -i "/$MODID/d" "$MOD_BACKUP_LOG"
-						echo | tee -a "$INSTALL_LOG" "$DEPRECATED_LOG"
-						echo "Mod $ARK_MOD_NAME_NORMAL with ModID "$MODID" are not more Supported and deactivated for Updater!" | tee -a "$INSTALL_LOG" "$DEPRECATED_LOG"
-						echo 'You can self deinstall from Disk over the "ark_mod_manager.sh".' | tee -a "$INSTALL_LOG" "$DEPRECATED_LOG"
+						echo >> "$INSTALL_LOG"
+						echo "Mod $ARK_MOD_NAME_NORMAL with ModID "$MODID" are not more Supported and deactivated for Updater!" >> "$INSTALL_LOG"
+						echo 'You can self deinstall from Disk over the "ark_mod_manager.sh".' >> "$INSTALL_LOG"
 					fi
 				else
 					echo "Mod $ARK_MOD_NAME_NORMAL in the masteraddons Folder has not been installed!" >> "$INSTALL_LOG"
