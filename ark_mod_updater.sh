@@ -69,9 +69,9 @@ PRE_CHECK() {
 	if [ ! -f "$TMP_PATH"/ark_mod_updater_status ]; then
 		UPDATE
 	else
-		redMessage "Updater is currently running... please try again later." >> "$INSTALL_LOG"
+		echo "Updater is currently running... please try again later." >> "$INSTALL_LOG"
 		echo >> "$INSTALL_LOG"
-		yellowMessage "Thanks for using this script and have a nice Day." >> "$INSTALL_LOG"
+		echo "Thanks for using this script and have a nice Day." >> "$INSTALL_LOG"
 		exit
 	fi
 }
