@@ -41,9 +41,10 @@ PRE_CHECK() {
 
 	LATEST_UPDATER_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/Lacrimosa99/Easy-WI-ARK-Mod-Updater/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9])'`
 	if [ "`printf "${LATEST_UPDATER_VERSION}\n${CURRENT_UPDATER_VERSION}" | sort -V | tail -n 1`" != "$CURRENT_UPDATER_VERSION" ]; then
-		echo "You are using the old script version ${CURRENT_UPDATER_VERSION}."	| tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
-		echo "Please upgrade to version ${LATEST_UPDATER_VERSION} over the ark_mod_manager.sh Script and retry." | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
-		FINISHED_HEADER
+		echo >> "$INSTALL_LOG"
+		echo "You are using a old ark mod updater script version ${CURRENT_UPDATER_VERSION}."	| tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
+		echo "Please upgrade to version ${LATEST_UPDATER_VERSION} over the ark_mod_manager.sh script and retry." | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
+		echo "Updater worked currently, but all script fixes and script updates are currently not available." | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
 	fi
 
 	if [ ! "$MASTERSERVER_USER" = "" ]; then
@@ -375,11 +376,6 @@ FINISHED() {
 		mv "$DEPRECATED_LOG" "$DEPRECATED_LOG"_old
 	fi
 
-	if [ ! "$EMAIL_TO" = "" ] && [ -f "$EMAIL_MESSAGE" ]; then
-		mail -s "$SUBJECT" "$EMAIL_TO" < "$EMAIL_MESSAGE"
-	fi
-	rm -rf "$EMAIL_MESSAGE" 2>&1 >/dev/null
-
 	if [ -f "$TMP_PATH"/ark_custom_appid_tmp.log ]; then
 		rm -rf "$TMP_PATH"/ark_custom_appid_tmp.log
 	fi
@@ -402,6 +398,12 @@ FINISHED() {
 }
 
 FINISHED_HEADER() {
+	if [ ! "$EMAIL_TO" = "" ] && [ -f "$EMAIL_MESSAGE" ]; then
+		mail -s "$SUBJECT" "$EMAIL_TO" < "$EMAIL_MESSAGE"
+		sleep 3
+		rm -rf "$EMAIL_MESSAGE" 2>&1 >/dev/null
+	fi
+
 	echo >> "$INSTALL_LOG"
 	echo "--------------------- Finished $(date +"%H:%M") ---------------------" >> "$INSTALL_LOG"
 	echo >> "$INSTALL_LOG"
