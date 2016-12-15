@@ -43,7 +43,7 @@ PRE_CHECK() {
 	if [ "`printf "${LATEST_UPDATER_VERSION}\n${CURRENT_UPDATER_VERSION}" | sort -V | tail -n 1`" != "$CURRENT_UPDATER_VERSION" ]; then
 		echo "You are using the old script version ${CURRENT_UPDATER_VERSION}."	| tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
 		echo "Please upgrade to version ${LATEST_UPDATER_VERSION} over the ark_mod_manager.sh Script and retry." | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
-		FINISHED
+		FINISHED_HEADER
 	fi
 
 	if [ ! "$MASTERSERVER_USER" = "" ]; then
@@ -51,29 +51,28 @@ PRE_CHECK() {
 		if ([ ! "$USER_CHECK" == "/home/$MASTERSERVER_USER:/bin/bash" -a ! "$USER_CHECK" == "/home/$MASTERSERVER_USER/:/bin/bash" ]); then
 			echo "User $MASTERSERVER_USER not found or wrong shell rights!" >> "$INSTALL_LOG"
 			echo "Please check the Masteruser inside this Script or the user shell rights." >> "$INSTALL_LOG"
-			FINISHED
+			FINISHED_HEADER
 		fi
 		if [ ! -d "$ARK_MOD_PATH" ]; then
 			echo "masteraddons Directory not found!" >> "$INSTALL_LOG"
-			FINISHED
+			FINISHED_HEADER
 		fi
 		if [ ! -f "$STEAM_CMD_PATH" ]; then
 			echo "Steam installation not found!" >> "$INSTALL_LOG"
-			FINISHED
+			FINISHED_HEADER
 		fi
 	else
 		echo 'Variable "MASTERSERVER_USER" are empty!' >> "$INSTALL_LOG"
-		FINISHED
+		FINISHED_HEADER
 	fi
 	sleep 2
 
 	if [ ! -f "$TMP_PATH"/ark_mod_updater_status ]; then
 		UPDATE
 	else
-		UPDATER_IS_RUNNING="1"
 		echo >> "$INSTALL_LOG"
 		echo "Updater is currently running... please try again later." >> "$INSTALL_LOG"
-		FINISHED
+		FINISHED_HEADER
 	fi
 }
 
@@ -235,6 +234,7 @@ INSTALL_CHECK() {
 					echo "Please try again later." >> "$INSTALL_LOG"
 				fi
 			else
+				echo "$MODID" >> "$MOD_LOG"
 				echo >> "$INSTALL_LOG"
 				echo "Mod is Up-to-Date: $MODID ($ARK_MOD_NAME_NORMAL)" >> "$INSTALL_LOG"
 			fi
@@ -394,10 +394,14 @@ FINISHED() {
 	find "$LOG_PATH" -name "ark_mod_deprecated_*" -mtime +30 -exec rm -rf {} \;
 	chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$LOG_PATH"/* 2>&1 >/dev/null
 
-	if [ ! "$UPDATER_IS_RUNNING" = "1" ] && [ -f "$TMP_PATH"/ark_mod_updater_status ]; then
+	if [ -f "$TMP_PATH"/ark_mod_updater_status ]; then
 		rm -rf "$TMP_PATH"/ark_mod_updater_status
 	fi
 
+	FINISHED_HEADER
+}
+
+FINISHED_HEADER() {
 	echo >> "$INSTALL_LOG"
 	echo "--------------------- Finished $(date +"%H:%M") ---------------------" >> "$INSTALL_LOG"
 	echo >> "$INSTALL_LOG"
@@ -405,6 +409,7 @@ FINISHED() {
 	if [ "$DEBUG" == "ON" ]; then
 		set +x
 	fi
+	exit
 }
 
 if [ "$DEBUG" == "ON" ]; then
