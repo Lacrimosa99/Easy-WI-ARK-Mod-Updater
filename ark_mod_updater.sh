@@ -41,8 +41,8 @@ PRE_CHECK() {
 
 	LATEST_UPDATER_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/Lacrimosa99/Easy-WI-ARK-Mod-Updater/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9])'`
 	if [ "`printf "${LATEST_UPDATER_VERSION}\n${CURRENT_UPDATER_VERSION}" | sort -V | tail -n 1`" != "$CURRENT_UPDATER_VERSION" ]; then
-		echo "You are using the old script version ${CURRENT_UPDATER_VERSION}."	>> "$INSTALL_LOG"
-		echo "Please upgrade to version ${LATEST_UPDATER_VERSION} over the ark_mod_manager.sh Script and retry."	>> "$INSTALL_LOG"
+		echo | tee -a "You are using the old script version ${CURRENT_UPDATER_VERSION}."	>> "$INSTALL_LOG" "$EMAIL_MESSAGE"
+		echo | tee -a "Please upgrade to version ${LATEST_UPDATER_VERSION} over the ark_mod_manager.sh Script and retry."	>> "$INSTALL_LOG" "$EMAIL_MESSAGE"
 		FINISHED
 	fi
 
