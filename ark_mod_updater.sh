@@ -33,7 +33,7 @@ TMP_PATH="/home/"$MASTERSERVER_USER"/temp"
 EMAIL_TMP_MESSAGE=""$TMP_PATH"/emailtmpmessage.txt"
 EMAIL_MESSAGE=""$TMP_PATH"/emailmessage.txt"
 DEAD_MOD="depreciated|deprecated|outdated|brocken|not-supported|mod-is-dead|no-longer-supported|old|discontinued"
-ARK_LOCAL_DATE=$(LANG=en_us_88591 date +"%d %b")
+ARK_LOCAL_DATE=$(LANG=en_us_88591 date -d "1 day ago" +"%d %b")
 
 PRE_CHECK() {
 	echo >> "$INSTALL_LOG"
