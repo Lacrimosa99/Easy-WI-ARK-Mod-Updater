@@ -130,8 +130,8 @@ INSTALL_CHECK() {
 			ARK_MOD_NAME_NORMAL=$(curl -s "http://steamcommunity.com/sharedfiles/filedetails/?id=$MODID" | sed -n 's|^.*<div class="workshopItemTitle">\([^<]*\)</div>.*|\1|p')
 			ARK_LAST_CHANGES_DATE=$(curl -s "https://steamcommunity.com/sharedfiles/filedetails/changelog/$MODID" | sed -n 's|^.*Update:\([^<]*\)</div>.*|\1|p' | head -n1 | cut -c 2-7)
 
-			if [ "$ARK_LOCAL_DATE" == "$ARK_LAST_CHANGES_DATE" ]; then
-				if [ ! "$ARK_MOD_NAME_NORMAL" = "" ]; then
+			if [ ! "$ARK_MOD_NAME_NORMAL" = "" ]; then
+				if [ "$ARK_LOCAL_DATE" == "$ARK_LAST_CHANGES_DATE" ]; then
 					ARK_MOD_NAME_TMP=$(echo "$ARK_MOD_NAME_NORMAL" | egrep "Difficulty|ItemTweaks|NPC")
 					if [ ! "$ARK_MOD_NAME_TMP" = "" ]; then
 						ARK_MOD_NAME=$(echo "$ARK_MOD_NAME_NORMAL" | tr "/" "-" | tr "[A-Z]" "[a-z]" | tr " " "-" | tr -d ".,!()[]" | sed "s/-updated//;s/+/-plus/;s/+/plus/" | sed 's/\\/-/;s/\\/-/;s/---/-/')
@@ -230,14 +230,14 @@ INSTALL_CHECK() {
 						echo "Mod $ARK_MOD_NAME_NORMAL in the masteraddons Folder has not been installed!" >> "$INSTALL_LOG"
 					fi
 				else
+					echo "$MODID" >> "$MOD_LOG"
 					echo >> "$INSTALL_LOG"
-					echo "Steam Community are currently not available or ModID $MODID not known!" >> "$INSTALL_LOG"
-					echo "Please try again later." >> "$INSTALL_LOG"
+					echo "Mod is Up-to-Date: $MODID ($ARK_MOD_NAME_NORMAL)" >> "$INSTALL_LOG"
 				fi
 			else
-				echo "$MODID" >> "$MOD_LOG"
 				echo >> "$INSTALL_LOG"
-				echo "Mod is Up-to-Date: $MODID ($ARK_MOD_NAME_NORMAL)" >> "$INSTALL_LOG"
+				echo "Steam Community are currently not available or ModID $MODID not known!" >> "$INSTALL_LOG"
+				echo "Please try again later." >> "$INSTALL_LOG"
 			fi
 		done
 }
