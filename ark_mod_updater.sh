@@ -32,7 +32,7 @@ MOD_NO_UPDATE_LOG=""$LOG_PATH"/ark_mod_id_no_update.log"
 TMP_PATH="/home/"$MASTERSERVER_USER"/temp"
 EMAIL_TMP_MESSAGE=""$TMP_PATH"/emailtmpmessage.txt"
 EMAIL_MESSAGE=""$TMP_PATH"/emailmessage.txt"
-DEAD_MOD="depreciated|deprecated|outdated|brocken|not-supported|mod-is-dead|no-longer-supported|old|discontinued"
+DEAD_MOD="depreciated|deprecated|outdated|brocken|not-supported|mod-is-dead|no-longer-supported|old|discontinued|no-longer-developed"
 ARK_LOCAL_DATE=$(LANG=en_us_88591 date -d "1 day ago" +"%d %b")
 
 PRE_CHECK() {
@@ -231,11 +231,9 @@ INSTALL_CHECK() {
 					fi
 				else
 					echo "$MODID" >> "$MOD_LOG"
-					echo >> "$INSTALL_LOG"
 					echo "Mod is Up-to-Date: $MODID ($ARK_MOD_NAME_NORMAL)" >> "$INSTALL_LOG"
 				fi
 			else
-				echo >> "$INSTALL_LOG"
 				echo "Steam Community are currently not available or ModID $MODID not known!" >> "$INSTALL_LOG"
 				echo "Please try again later." >> "$INSTALL_LOG"
 			fi
@@ -404,7 +402,6 @@ FINISHED_HEADER() {
 		rm -rf "$EMAIL_MESSAGE" 2>&1 >/dev/null
 	fi
 
-	echo >> "$INSTALL_LOG"
 	echo "--------------------- Finished $(date +"%H:%M") ---------------------" >> "$INSTALL_LOG"
 	echo >> "$INSTALL_LOG"
 	echo >> "$INSTALL_LOG"
