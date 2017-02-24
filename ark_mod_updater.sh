@@ -71,6 +71,7 @@ PRE_CHECK() {
 
 	if [ ! -d "$MOD_LAST_UPDATE" ]; then
 		mkdir "$MOD_LAST_UPDATE"
+		chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$MOD_LAST_UPDATE" 2>&1 >/dev/null
 	fi
 
 	if [ ! -f "$TMP_PATH"/ark_mod_updater_status ]; then
@@ -174,7 +175,6 @@ INSTALL_CHECK() {
 							echo "Steam Download Status: $RESULT" >> "$INSTALL_LOG"
 							echo "Connection Attempts: $COUNTER" >> "$INSTALL_LOG"
 							echo >> "$INSTALL_LOG"
-							echo "$ARK_LOCAL_DATE" > ""$MOD_LAST_UPDATE"/ark_mod_id_"$MODID".txt"
 							break
 						else
 							if [ "$COUNTER" = "3" ]; then
@@ -222,6 +222,7 @@ INSTALL_CHECK() {
 							fi
 							chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$ARK_MOD_PATH"/ark_"$MODID" 2>&1 >/dev/null
 							sed -i "/$MODID/d" "$TMP_PATH"/ark_custom_appid_tmp.log
+							echo "$ARK_LOCAL_DATE" > ""$MOD_LAST_UPDATE"/ark_mod_id_"$MODID".txt"
 						else
 							if [ ! -f "$MOD_NO_UPDATE_LOG" ]; then
 								touch "$MOD_NO_UPDATE_LOG"
@@ -240,7 +241,6 @@ INSTALL_CHECK() {
 				else
 					echo "$MODID" >> "$MOD_LOG"
 					echo "Mod is Up-to-Date: $MODID ($ARK_MOD_NAME_NORMAL)" >> "$INSTALL_LOG"
-					echo "$ARK_LOCAL_DATE" > ""$MOD_LAST_UPDATE"/ark_mod_id_"$MODID".txt"
 				fi
 			else
 				echo "$MODID" >> "$MOD_LOG"
