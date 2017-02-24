@@ -29,6 +29,7 @@ MOD_BACKUP_LOG=""$LOG_PATH"/ark_mod_id_backup.log"
 INSTALL_LOG=""$LOG_PATH"/ark_mod_update_status_$(date +"%d-%m-%Y").log"
 DEPRECATED_LOG=""$LOG_PATH"/ark_mod_deprecated_$(date +"%d-%m-%Y").log"
 MOD_NO_UPDATE_LOG=""$LOG_PATH"/ark_mod_id_no_update.log"
+MOD_LAST_UPDATE="/home/"$MASTERSERVER_USER"/versions"
 TMP_PATH="/home/"$MASTERSERVER_USER"/temp"
 EMAIL_TMP_MESSAGE=""$TMP_PATH"/emailtmpmessage.txt"
 EMAIL_MESSAGE=""$TMP_PATH"/emailmessage.txt"
@@ -67,6 +68,10 @@ PRE_CHECK() {
 		FINISHED_HEADER
 	fi
 	sleep 2
+
+	if [ ! -d "$MOD_LAST_UPDATE" ]; then
+		mkdir "$MOD_LAST_UPDATE"
+	fi
 
 	if [ ! -f "$TMP_PATH"/ark_mod_updater_status ]; then
 		UPDATE
@@ -129,9 +134,10 @@ INSTALL_CHECK() {
 		for MODID in ${ARK_MOD_ID[@]}; do
 			ARK_MOD_NAME_NORMAL=$(curl -s "http://steamcommunity.com/sharedfiles/filedetails/?id=$MODID" | sed -n 's|^.*<div class="workshopItemTitle">\([^<]*\)</div>.*|\1|p')
 			ARK_LAST_CHANGES_DATE=$(curl -s "https://steamcommunity.com/sharedfiles/filedetails/changelog/$MODID" | sed -n 's|^.*Update:\([^<]*\)</div>.*|\1|p' | head -n1 | cut -c 2-7)
+			ARK_LAST_UPDATE=$(cat "$MOD_LAST_UPDATE"/ark_mod_id_"$MODID".txt)
 
 			if [ ! "$ARK_MOD_NAME_NORMAL" = "" ]; then
-				if [ "$ARK_LOCAL_DATE" == "$ARK_LAST_CHANGES_DATE" ]; then
+				if [ "$ARK_LOCAL_DATE" == "$ARK_LAST_CHANGES_DATE" ] && [ ! "$ARK_LAST_UPDATE" = "$ARK_LOCAL_DATE" ]; then
 					ARK_MOD_NAME_TMP=$(echo "$ARK_MOD_NAME_NORMAL" | egrep "Difficulty|ItemTweaks|NPC")
 					if [ ! "$ARK_MOD_NAME_TMP" = "" ]; then
 						ARK_MOD_NAME=$(echo "$ARK_MOD_NAME_NORMAL" | tr "/" "-" | tr "[A-Z]" "[a-z]" | tr " " "-" | tr -d ".,!()[]" | sed "s/-updated//;s/+/-plus/;s/+/plus/" | sed 's/\\/-/;s/\\/-/;s/---/-/')
@@ -167,6 +173,8 @@ INSTALL_CHECK() {
 							echo "$MODID" >> "$INSTALL_LOG"
 							echo "Steam Download Status: $RESULT" >> "$INSTALL_LOG"
 							echo "Connection Attempts: $COUNTER" >> "$INSTALL_LOG"
+							echo >> "$INSTALL_LOG"
+							echo "$ARK_LOCAL_DATE" > ""$MOD_LAST_UPDATE"/ark_mod_id_"$MODID".txt"
 							break
 						else
 							if [ "$COUNTER" = "3" ]; then
@@ -232,6 +240,7 @@ INSTALL_CHECK() {
 				else
 					echo "$MODID" >> "$MOD_LOG"
 					echo "Mod is Up-to-Date: $MODID ($ARK_MOD_NAME_NORMAL)" >> "$INSTALL_LOG"
+					echo "$ARK_LOCAL_DATE" > ""$MOD_LAST_UPDATE"/ark_mod_id_"$MODID".txt"
 				fi
 			else
 				echo "$MODID" >> "$MOD_LOG"
