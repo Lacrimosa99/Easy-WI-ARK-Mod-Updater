@@ -406,11 +406,13 @@ FINISHED() {
 }
 
 FINISHED_HEADER() {
-	if [ ! "$EMAIL_TO" = "" ] && [ -f "$EMAIL_MESSAGE" ]; then
+	if [ ! "$EMAIL_TO" = "" ] && [ -f "$EMAIL_MESSAGE" ] && [ ! -f "$EMAIL_MESSAGE".$(date +%d.%m.%Y) ]; then
 		mail -s "$SUBJECT" "$EMAIL_TO" < "$EMAIL_MESSAGE"
 		sleep 3
-		rm -rf "$EMAIL_MESSAGE" 2>&1 >/dev/null
+		mv "$EMAIL_MESSAGE" "$EMAIL_MESSAGE".$(date +%d.%m.%Y)
 	fi
+
+	find "$TMP_PATH" -name "emailmessage.txt.*" -mtime +3 -exec rm -rf {} \;
 
 	echo "--------------------- Finished $(date +"%H:%M") ---------------------" >> "$INSTALL_LOG"
 	echo >> "$INSTALL_LOG"
