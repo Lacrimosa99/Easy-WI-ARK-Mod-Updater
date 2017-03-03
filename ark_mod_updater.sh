@@ -16,7 +16,7 @@ SUBJECT="ARK Mod-ID failure detected on $(hostname)"
 ######## from here nothing change ########
 ##########################################
 
-CURRENT_UPDATER_VERSION="1.3"
+CURRENT_UPDATER_VERSION="1.4"
 ARK_APP_ID="346110"
 STEAM_MASTER_PATH="/home/$MASTERSERVER_USER/masterserver/steamCMD"
 STEAM_CMD_PATH="$STEAM_MASTER_PATH/steamcmd.sh"
@@ -29,16 +29,37 @@ MOD_BACKUP_LOG=""$LOG_PATH"/ark_mod_id_backup.log"
 INSTALL_LOG=""$LOG_PATH"/ark_mod_update_status_$(date +"%d-%m-%Y").log"
 DEPRECATED_LOG=""$LOG_PATH"/ark_mod_deprecated_$(date +"%d-%m-%Y").log"
 MOD_NO_UPDATE_LOG=""$LOG_PATH"/ark_mod_id_no_update.log"
-MOD_LAST_UPDATE="/home/"$MASTERSERVER_USER"/versions"
+MOD_LAST_VERSION="/home/"$MASTERSERVER_USER"/versions"
 TMP_PATH="/home/"$MASTERSERVER_USER"/temp"
-EMAIL_TMP_MESSAGE=""$TMP_PATH"/emailtmpmessage.txt"
 EMAIL_MESSAGE=""$TMP_PATH"/emailmessage.txt"
 DEAD_MOD="depreciated|deprecated|outdated|brocken|not-supported|mod-is-dead|no-longer-|old|discontinued"
-ARK_LOCAL_DATE=$(LANG=en_us_88591 date -d "1 day ago" +"%d %b")
+ARK_LOCAL_DATE=$(LANG=en_us_88591 date -d "1 day ago" +"%d %b" | sed 's/^0*//')
 
 PRE_CHECK() {
-	echo >> "$INSTALL_LOG"
-	echo "-------------------- Beginn Log $(date +"%H:%M") --------------------" >> "$INSTALL_LOG"
+	if [ ! "$MASTERSERVER_USER" = "" ]; then
+		echo >> "$INSTALL_LOG"
+		echo "-------------------- Beginn Log $(date +"%H:%M") --------------------" >> "$INSTALL_LOG"
+
+		USER_CHECK=$(cut -d: -f6,7 /etc/passwd | grep "$MASTERSERVER_USER" | head -n1)
+		if ([ ! "$USER_CHECK" == "/home/$MASTERSERVER_USER:/bin/bash" -a ! "$USER_CHECK" == "/home/$MASTERSERVER_USER/:/bin/bash" ]); then
+			FAILURE_MESSAGE="User $MASTERSERVER_USER not found or wrong shell rights!\nPlease check the Masteruser inside this Script or the user shell rights."
+			TMP_FAILURE_EMAIL
+		fi
+
+		if [ ! -d "$ARK_MOD_PATH" ]; then
+			FAILURE_MESSAGE='Masteraddons Directory "/home/'$MASTERSERVER_USER'/masteraddons" not found!'
+			TMP_FAILURE_EMAIL
+		fi
+
+		if [ ! -f "$STEAM_CMD_PATH" ]; then
+			FAILURE_MESSAGE='Steam Installation "/home/'$MASTERSERVER_USER'/masterserver/steamCMD/steamcmd.sh" found!'
+			TMP_FAILURE_EMAIL
+		fi
+	else
+		FAILURE_MESSAGE='Variable "MASTERSERVER_USER" are empty!'
+		TMP_FAILURE_EMAIL
+	fi
+	sleep 2
 
 	LATEST_UPDATER_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/Lacrimosa99/Easy-WI-ARK-Mod-Updater/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9])'`
 	if [ "`printf "${LATEST_UPDATER_VERSION}\n${CURRENT_UPDATER_VERSION}" | sort -V | tail -n 1`" != "$CURRENT_UPDATER_VERSION" ]; then
@@ -48,30 +69,9 @@ PRE_CHECK() {
 		echo "Updater worked currently, but all script fixes and script updates are currently not available." | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
 	fi
 
-	if [ ! "$MASTERSERVER_USER" = "" ]; then
-		USER_CHECK=$(cut -d: -f6,7 /etc/passwd | grep "$MASTERSERVER_USER" | head -n1)
-		if ([ ! "$USER_CHECK" == "/home/$MASTERSERVER_USER:/bin/bash" -a ! "$USER_CHECK" == "/home/$MASTERSERVER_USER/:/bin/bash" ]); then
-			echo "User $MASTERSERVER_USER not found or wrong shell rights!" >> "$INSTALL_LOG"
-			echo "Please check the Masteruser inside this Script or the user shell rights." >> "$INSTALL_LOG"
-			FINISHED_HEADER
-		fi
-		if [ ! -d "$ARK_MOD_PATH" ]; then
-			echo "masteraddons Directory not found!" >> "$INSTALL_LOG"
-			FINISHED_HEADER
-		fi
-		if [ ! -f "$STEAM_CMD_PATH" ]; then
-			echo "Steam installation not found!" >> "$INSTALL_LOG"
-			FINISHED_HEADER
-		fi
-	else
-		echo 'Variable "MASTERSERVER_USER" are empty!' >> "$INSTALL_LOG"
-		FINISHED_HEADER
-	fi
-	sleep 2
-
-	if [ ! -d "$MOD_LAST_UPDATE" ]; then
-		mkdir "$MOD_LAST_UPDATE"
-		chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$MOD_LAST_UPDATE" 2>&1 >/dev/null
+	if [ ! -d "$MOD_LAST_VERSION" ]; then
+		mkdir "$MOD_LAST_VERSION"
+		chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$MOD_LAST_VERSION" 2>&1 >/dev/null
 	fi
 
 	if [ ! -f "$TMP_PATH"/ark_mod_updater_status ]; then
@@ -132,122 +132,128 @@ UPDATE() {
 }
 
 INSTALL_CHECK() {
-		for MODID in ${ARK_MOD_ID[@]}; do
-			ARK_MOD_NAME_NORMAL=$(curl -s "http://steamcommunity.com/sharedfiles/filedetails/?id=$MODID" | sed -n 's|^.*<div class="workshopItemTitle">\([^<]*\)</div>.*|\1|p')
-			ARK_LAST_CHANGES_DATE=$(curl -s "https://steamcommunity.com/sharedfiles/filedetails/changelog/$MODID" | sed -n 's|^.*Update:\([^<]*\)</div>.*|\1|p' | head -n1 | cut -c 2-7)
-			ARK_LAST_UPDATE=$(cat "$MOD_LAST_UPDATE"/ark_mod_id_"$MODID".txt)
+	for MODID in ${ARK_MOD_ID[@]}; do
+		ARK_MOD_NAME_NORMAL=$(curl -s "http://steamcommunity.com/sharedfiles/filedetails/?id=$MODID" | sed -n 's|^.*<div class="workshopItemTitle">\([^<]*\)</div>.*|\1|p')
+		ARK_LAST_CHANGES_DATE=$(curl -s "https://steamcommunity.com/sharedfiles/filedetails/changelog/$MODID" | sed -n 's|^.*Update:\([^<]*\)</div>.*|\1|p' | head -n1 | cut -c 2-7 | sed 's/,//;s/[ \t]*$//;s/^0*//')
 
-			if [ ! "$ARK_MOD_NAME_NORMAL" = "" ]; then
-				if [ "$ARK_LOCAL_DATE" == "$ARK_LAST_CHANGES_DATE" ] && [ ! "$ARK_LAST_UPDATE" = "$ARK_LOCAL_DATE" ]; then
-					ARK_MOD_NAME_TMP=$(echo "$ARK_MOD_NAME_NORMAL" | egrep "Difficulty|ItemTweaks|NPC")
-					if [ ! "$ARK_MOD_NAME_TMP" = "" ]; then
-						ARK_MOD_NAME=$(echo "$ARK_MOD_NAME_NORMAL" | tr "/" "-" | tr "[A-Z]" "[a-z]" | tr " " "-" | tr -d ".,!()[]" | sed "s/-updated//;s/+/-plus/;s/+/plus/" | sed 's/\\/-/;s/\\/-/;s/---/-/')
-					else
-						ARK_MOD_NAME=$(echo "$ARK_MOD_NAME_NORMAL" | tr "/" "-" | tr "[A-Z]" "[a-z]" | tr " " "-" | tr -d ".,+!()[]" | sed "s/-updated//;s/-v[0-9][0-9]*//;s/-[0-9][0-9]*//" | sed 's/\\/-/;s/\\/-/;s/---/-/')
+		if [ -f "$MOD_LAST_VERSION"/ark_mod_id_"$MODID".txt ]; then
+			ARK_LAST_UPDATE=$(cat "$MOD_LAST_VERSION"/ark_mod_id_"$MODID".txt | sed 's/[ \t]*$//;s/^0*//')
+		else
+			ARK_LAST_UPDATE=""
+		fi
+
+		if [ ! "$ARK_MOD_NAME_NORMAL" = "" ]; then
+			if [ "$ARK_LOCAL_DATE" == "$ARK_LAST_CHANGES_DATE" -a ! "$ARK_LAST_CHANGES_DATE" = "$ARK_LAST_UPDATE" ]; then
+				ARK_MOD_NAME_TMP=$(echo "$ARK_MOD_NAME_NORMAL" | egrep "Difficulty|ItemTweaks|NPC")
+				if [ ! "$ARK_MOD_NAME_TMP" = "" ]; then
+					ARK_MOD_NAME=$(echo "$ARK_MOD_NAME_NORMAL" | tr "/" "-" | tr "[A-Z]" "[a-z]" | tr " " "-" | tr -d ".,!()[]" | sed "s/-updated//;s/+/-plus/;s/+/plus/" | sed 's/\\/-/;s/\\/-/;s/---/-/')
+				else
+					ARK_MOD_NAME=$(echo "$ARK_MOD_NAME_NORMAL" | tr "/" "-" | tr "[A-Z]" "[a-z]" | tr " " "-" | tr -d ".,+!()[]" | sed "s/-updated//;s/-v[0-9][0-9]*//;s/-[0-9][0-9]*//" | sed 's/\\/-/;s/\\/-/;s/---/-/')
+				fi
+				ARK_MOD_NAME_DEPRECATED=$(echo "$ARK_MOD_NAME" | egrep "$DEAD_MOD")
+
+				COUNTER=0
+				while [ $COUNTER -lt 4 ]; do
+					if [ ! -d "$STEAM_CONTENT_PATH" -o ! -d "$STEAM_DOWNLOAD_PATH" ]; then
+						su "$MASTERSERVER_USER" -c "mkdir -p "$STEAM_CONTENT_PATH""
+						su "$MASTERSERVER_USER" -c "mkdir -p "$STEAM_DOWNLOAD_PATH""
 					fi
-					ARK_MOD_NAME_DEPRECATED=$(echo "$ARK_MOD_NAME" | egrep "$DEAD_MOD")
 
-					COUNTER=0
-					while [ $COUNTER -lt 4 ]; do
-						if [ ! -d "$STEAM_CONTENT_PATH" -o ! -d "$STEAM_DOWNLOAD_PATH" ]; then
-							su "$MASTERSERVER_USER" -c "mkdir -p "$STEAM_CONTENT_PATH""
-							su "$MASTERSERVER_USER" -c "mkdir -p "$STEAM_DOWNLOAD_PATH""
-						fi
+					RESULT=$(su "$MASTERSERVER_USER" -c "$STEAM_CMD_PATH +login anonymous +workshop_download_item $ARK_APP_ID $MODID validate +quit" | egrep "Success" | cut -c 1-7)
 
-						RESULT=$(su "$MASTERSERVER_USER" -c "$STEAM_CMD_PATH +login anonymous +workshop_download_item $ARK_APP_ID $MODID validate +quit" | egrep "Success" | cut -c 1-7)
-
-						if [ "$RESULT" == "Success" ]; then
-							if [ -f "$TMP_PATH"/ark_update_failure.log ]; then
-								TMP_ID=$(cat "$TMP_PATH"/ark_update_failure.log | grep "$MODID")
-								if [ "$TMP_ID" = "" ]; then
-									sed -i "/$MODID/d" "$TMP_PATH"/ark_update_failure.log
-								fi
+					if [ "$RESULT" == "Success" ]; then
+						if [ -f "$TMP_PATH"/ark_update_failure.log ]; then
+							TMP_ID=$(cat "$TMP_PATH"/ark_update_failure.log | grep "$MODID")
+							if [ "$TMP_ID" = "" ]; then
+								sed -i "/$MODID/d" "$TMP_PATH"/ark_update_failure.log
 							fi
+						fi
+						echo >> "$INSTALL_LOG"
+						if  [ "$SECOND_DOWNLOAD" = "1" ]; then
+							echo >> "$INSTALL_LOG"
+							echo "Second Download:" >> "$INSTALL_LOG"
+							echo >> "$INSTALL_LOG"
+							echo >> "$INSTALL_LOG"
+						fi
+						echo "$ARK_MOD_NAME_NORMAL" >> "$INSTALL_LOG"
+						echo "$MODID" >> "$INSTALL_LOG"
+						echo "Steam Download Status: $RESULT" >> "$INSTALL_LOG"
+						echo "Connection Attempts: $COUNTER" >> "$INSTALL_LOG"
+						echo >> "$INSTALL_LOG"
+						break
+					else
+						if [ "$COUNTER" = "3" ]; then
 							echo >> "$INSTALL_LOG"
 							if  [ "$SECOND_DOWNLOAD" = "1" ]; then
-								echo >> "$INSTALL_LOG"
+							echo >> "$INSTALL_LOG"
 								echo "Second Download:" >> "$INSTALL_LOG"
 								echo >> "$INSTALL_LOG"
 								echo >> "$INSTALL_LOG"
 							fi
 							echo "$ARK_MOD_NAME_NORMAL" >> "$INSTALL_LOG"
 							echo "$MODID" >> "$INSTALL_LOG"
-							echo "Steam Download Status: $RESULT" >> "$INSTALL_LOG"
-							echo "Connection Attempts: $COUNTER" >> "$INSTALL_LOG"
-							echo >> "$INSTALL_LOG"
+							echo "Steam Download Status: FAILED" >> "$INSTALL_LOG"
+							if [ ! -f "$TMP_PATH"/ark_update_failure.log ]; then
+								touch "$TMP_PATH"/ark_update_failure.log
+							fi
+							TMP_ID=$(cat "$TMP_PATH"/ark_update_failure.log | grep "$MODID")
+							if [ "$TMP_ID" = "" ]; then
+								echo "$MODID" >> "$TMP_PATH"/ark_update_failure.log
+							fi
+							sed -i "/$MODID/d" "$TMP_PATH"/ark_custom_appid_tmp.log
 							break
 						else
-							if [ "$COUNTER" = "3" ]; then
-								echo >> "$INSTALL_LOG"
-								if  [ "$SECOND_DOWNLOAD" = "1" ]; then
-								echo >> "$INSTALL_LOG"
-									echo "Second Download:" >> "$INSTALL_LOG"
-									echo >> "$INSTALL_LOG"
-									echo >> "$INSTALL_LOG"
-								fi
-								echo "$ARK_MOD_NAME_NORMAL" >> "$INSTALL_LOG"
-								echo "$MODID" >> "$INSTALL_LOG"
-								echo "Steam Download Status: FAILED" >> "$INSTALL_LOG"
-								if [ ! -f "$TMP_PATH"/ark_update_failure.log ]; then
-									touch "$TMP_PATH"/ark_update_failure.log
-								fi
-								TMP_ID=$(cat "$TMP_PATH"/ark_update_failure.log | grep "$MODID")
-								if [ "$TMP_ID" = "" ]; then
-									echo "$MODID" >> "$TMP_PATH"/ark_update_failure.log
-								fi
-								sed -i "/$MODID/d" "$TMP_PATH"/ark_custom_appid_tmp.log
-								break
-							else
-								rm -rf $STEAM_CONTENT_PATH/*
-								rm -rf $STEAM_DOWNLOAD_PATH/*
-								let COUNTER=$COUNTER+1
-								sleep 5
-							fi
+							rm -rf $STEAM_CONTENT_PATH/*
+							rm -rf $STEAM_DOWNLOAD_PATH/*
+							let COUNTER=$COUNTER+1
+							sleep 5
 						fi
-					done
-
-					if [ -d "$STEAM_CONTENT_PATH"/"$MODID" ]; then
-						rm -rf "$ARK_MOD_PATH"/ark_"$MODID"/ShooterGame/Content/Mods/"$MODID"/ 2>&1 >/dev/null
-						DECOMPRESS
-					else
-						echo "ModID $MODID in the Steam Content Folder not found!" >> "$INSTALL_LOG"
 					fi
-					if [ -d "$ARK_MOD_PATH"/ark_"$MODID" ]; then
-						if [ "$ARK_MOD_NAME_DEPRECATED" = "" ]; then
-							if [ -f "$MOD_LOG" ]; then
-								MOD_TMP_NAME=$(cat "$MOD_LOG" | grep "$MODID" )
-							fi
-							if [ "$MOD_TMP_NAME" = "" ]; then
-								echo "$MODID" >> "$MOD_LOG"
-							fi
-							chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$ARK_MOD_PATH"/ark_"$MODID" 2>&1 >/dev/null
-							sed -i "/$MODID/d" "$TMP_PATH"/ark_custom_appid_tmp.log
-							echo "$ARK_LOCAL_DATE" > ""$MOD_LAST_UPDATE"/ark_mod_id_"$MODID".txt"
-						else
-							if [ ! -f "$MOD_NO_UPDATE_LOG" ]; then
-								touch "$MOD_NO_UPDATE_LOG"
-							fi
-							if [ $(MOD_TMP_NAME=$(cat "$MOD_NO_UPDATE_LOG" | grep "$MODID" )) = "" ]; then
-								echo "$MODID" >> "$MOD_NO_UPDATE_LOG"
-							fi
-							sed -i "/$MODID/d" "$MOD_BACKUP_LOG"
-							echo >> "$INSTALL_LOG"
-							echo "Mod $ARK_MOD_NAME_NORMAL with ModID "$MODID" are not more Supported and deactivated for Updater!" >> "$INSTALL_LOG"
-							echo 'You can self deinstall from Disk over the "ark_mod_manager.sh".' >> "$INSTALL_LOG"
+				done
+
+				if [ -d "$STEAM_CONTENT_PATH"/"$MODID" ]; then
+					rm -rf "$ARK_MOD_PATH"/ark_"$MODID"/ShooterGame/Content/Mods/"$MODID"/ 2>&1 >/dev/null
+					DECOMPRESS
+				else
+					echo "ModID $MODID in the Steam Content Folder not found!" >> "$INSTALL_LOG"
+				fi
+				if [ -d "$ARK_MOD_PATH"/ark_"$MODID" ]; then
+					if [ "$ARK_MOD_NAME_DEPRECATED" = "" ]; then
+						if [ -f "$MOD_LOG" ]; then
+							MOD_TMP_NAME=$(cat "$MOD_LOG" | grep "$MODID" )
 						fi
+						if [ "$MOD_TMP_NAME" = "" ]; then
+							echo "$MODID" >> "$MOD_LOG"
+						fi
+						chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$ARK_MOD_PATH"/ark_"$MODID" 2>&1 >/dev/null
+						sed -i "/$MODID/d" "$TMP_PATH"/ark_custom_appid_tmp.log
+						echo "$ARK_LAST_CHANGES_DATE" > ""$MOD_LAST_VERSION"/ark_mod_id_"$MODID".txt"
+						chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$MOD_LAST_VERSION" 2>&1 >/dev/null
 					else
-						echo "Mod $ARK_MOD_NAME_NORMAL in the masteraddons Folder has not been installed!" >> "$INSTALL_LOG"
+						if [ ! -f "$MOD_NO_UPDATE_LOG" ]; then
+							touch "$MOD_NO_UPDATE_LOG"
+						fi
+						if [ $(MOD_TMP_NAME=$(cat "$MOD_NO_UPDATE_LOG" | grep "$MODID" )) = "" ]; then
+							echo "$MODID" >> "$MOD_NO_UPDATE_LOG"
+						fi
+						sed -i "/$MODID/d" "$MOD_BACKUP_LOG"
+						echo >> "$INSTALL_LOG"
+						echo "Mod $ARK_MOD_NAME_NORMAL with ModID "$MODID" are not more Supported and deactivated for Updater!" >> "$INSTALL_LOG"
+						echo 'You can self deinstall from Disk over the "ark_mod_manager.sh".' >> "$INSTALL_LOG"
 					fi
 				else
-					echo "$MODID" >> "$MOD_LOG"
-					echo "Mod is Up-to-Date: $MODID ($ARK_MOD_NAME_NORMAL)" >> "$INSTALL_LOG"
+					echo "Mod $ARK_MOD_NAME_NORMAL in the masteraddons Folder has not been installed!" >> "$INSTALL_LOG"
 				fi
 			else
 				echo "$MODID" >> "$MOD_LOG"
-				echo "Steam Community are currently not available or ModID $MODID not known!" >> "$INSTALL_LOG"
-				echo "Please try again later." >> "$INSTALL_LOG"
+				echo "Mod is Up-to-Date: $MODID ($ARK_MOD_NAME_NORMAL)" >> "$INSTALL_LOG"
 			fi
-		done
+		else
+			echo "$MODID" >> "$MOD_LOG"
+			echo "Steam Community are currently not available or ModID $MODID not known!" >> "$INSTALL_LOG"
+			echo "Please try again later." >> "$INSTALL_LOG"
+		fi
+	done
 }
 
 DECOMPRESS() {
@@ -397,6 +403,7 @@ FINISHED() {
 	find "$LOG_PATH" -name "ark_mod_update_*" -mtime +5 -exec rm -rf {} \;
 	find "$LOG_PATH" -name "ark_mod_deprecated_*" -mtime +30 -exec rm -rf {} \;
 	chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$LOG_PATH"/* 2>&1 >/dev/null
+	chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$MOD_LAST_VERSION"/* 2>&1 >/dev/null
 
 	if [ -f "$TMP_PATH"/ark_mod_updater_status ]; then
 		rm -rf "$TMP_PATH"/ark_mod_updater_status
@@ -405,18 +412,40 @@ FINISHED() {
 	FINISHED_HEADER
 }
 
+TMP_FAILURE_EMAIL() {
+	TMP_PATH="/tmp"
+	EMAIL_MESSAGE=""$TMP_PATH"/emailmessage.txt"
+	echo "Date: $(date +%d.%m.%Y_%H:%M)" >> "$EMAIL_MESSAGE"
+	echo "Hostname: $(hostname)" >> "$EMAIL_MESSAGE"
+	echo "IP: $(ip -4 -o addr show dev eth0 | awk '{split($4,a,"/") ;print a[1]}' | head -n1)"	>> "$EMAIL_MESSAGE"
+	echo >> "$EMAIL_MESSAGE"
+	echo "Failure Message:" >> "$EMAIL_MESSAGE"
+	echo -e "$FAILURE_MESSAGE" >> "$EMAIL_MESSAGE"
+	echo >> "$EMAIL_MESSAGE"
+	echo 'Ark Mod Updater has been stopped!' >> "$EMAIL_MESSAGE"
+	echo 'Please fix it in the next time.' >> "$EMAIL_MESSAGE"
+
+	FINISHED_HEADER
+}
+
 FINISHED_HEADER() {
 	if [ ! "$EMAIL_TO" = "" ] && [ -f "$EMAIL_MESSAGE" ] && [ ! -f "$EMAIL_MESSAGE".$(date +%d.%m.%Y) ]; then
 		mail -s "$SUBJECT" "$EMAIL_TO" < "$EMAIL_MESSAGE"
 		sleep 3
-		mv "$EMAIL_MESSAGE" "$EMAIL_MESSAGE".$(date +%d.%m.%Y)
-	fi
 
-	find "$TMP_PATH" -name "emailmessage.txt.*" -mtime +3 -exec rm -rf {} \;
+		if [ "$TMP_PATH" = "/tmp" ]; then
+			mv "$EMAIL_MESSAGE" "$EMAIL_MESSAGE".$(date +%d.%m.%Y) 2>&1 >/dev/null
+			find "$TMP_PATH" -name "emailmessage.txt.*" -mtime +3 -exec rm -rf {} \;
+		else
+			mv "$EMAIL_MESSAGE" "$EMAIL_MESSAGE".$(date +%d.%m.%Y) 2>&1 >/dev/null
+			find "$TMP_PATH" -name "emailmessage.txt.*" -mtime +3 -exec rm -rf {} \;
+		fi
+	fi
 
 	echo "--------------------- Finished $(date +"%H:%M") ---------------------" >> "$INSTALL_LOG"
 	echo >> "$INSTALL_LOG"
 	echo >> "$INSTALL_LOG"
+
 	if [ "$DEBUG" == "ON" ]; then
 		set +x
 	fi
