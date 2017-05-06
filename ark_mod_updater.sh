@@ -16,7 +16,7 @@ SUBJECT="ARK Mod-ID failure detected on $(hostname)"
 ######## from here nothing change ########
 ##########################################
 
-CURRENT_UPDATER_VERSION="1.5"
+CURRENT_UPDATER_VERSION="1.6"
 ARK_APP_ID="346110"
 MASTER_PATH="/home/$MASTERSERVER_USER"
 STEAM_CMD_PATH="$MASTER_PATH/masterserver/steamCMD/steamcmd.sh"
@@ -31,7 +31,6 @@ MOD_LAST_VERSION="$MASTER_PATH/versions"
 TMP_PATH="$MASTER_PATH/temp"
 EMAIL_MESSAGE=""$TMP_PATH"/emailmessage.txt"
 DEAD_MOD="deprec|outdated|brocken|not-supported|mod-is-dead|no-longer-|old|discontinued"
-ARK_LOCAL_DATE=$(LANG=en_us_88591 date -d "1 day ago" +"%d %b" | sed 's/^0*//')
 
 PRE_CHECK() {
 	if [ ! "$MASTERSERVER_USER" = "" ]; then
@@ -132,16 +131,16 @@ UPDATE() {
 INSTALL_CHECK() {
 	for MODID in ${ARK_MOD_ID[@]}; do
 		ARK_MOD_NAME_NORMAL=$(curl -s "http://steamcommunity.com/sharedfiles/filedetails/?id=$MODID" | sed -n 's|^.*<div class="workshopItemTitle">\([^<]*\)</div>.*|\1|p')
-		ARK_LAST_CHANGES_DATE=$(curl -s "https://steamcommunity.com/sharedfiles/filedetails/changelog/$MODID" | sed -n 's|^.*Update:\([^<]*\)</div>.*|\1|p' | head -n1 | cut -c 2-7 | sed 's/,//;s/[ \t]*$//;s/^0*//')
+		ARK_LAST_CHANGES_DATE=$(curl -s "https://steamcommunity.com/sharedfiles/filedetails/changelog/$MODID" | sed -n 's|^.*Update: \([^<]*\)</div>.*|\1|p' | head -n1 | tr -d ',\t')
 
 		if [ -f "$MOD_LAST_VERSION"/ark_mod_id_"$MODID".txt ]; then
-			ARK_LAST_UPDATE=$(cat "$MOD_LAST_VERSION"/ark_mod_id_"$MODID".txt | sed 's/[ \t]*$//;s/^0*//')
+			ARK_LOCAL_UPDATE=$(cat "$MOD_LAST_VERSION"/ark_mod_id_"$MODID".txt)
 		else
-			ARK_LAST_UPDATE=""
+			ARK_LOCAL_UPDATE=""
 		fi
 
 		if [ ! "$ARK_MOD_NAME_NORMAL" = "" ]; then
-			if [ "$ARK_LOCAL_DATE" == "$ARK_LAST_CHANGES_DATE" -a ! "$ARK_LAST_CHANGES_DATE" = "$ARK_LAST_UPDATE" ]; then
+			if [ ! "$ARK_LOCAL_UPDATE" = "$ARK_LAST_CHANGES_DATE" ]; then
 				ARK_MOD_NAME_TMP=$(echo "$ARK_MOD_NAME_NORMAL" | egrep "Difficulty|ItemTweaks|NPC")
 				if [ ! "$ARK_MOD_NAME_TMP" = "" ]; then
 					ARK_MOD_NAME=$(echo "$ARK_MOD_NAME_NORMAL" | tr "/" "-" | tr "[A-Z]" "[a-z]" | tr " " "-" | tr -d ".,!()[]" | sed "s/-updated//;s/+/-plus/;s/+/plus/" | sed 's/\\/-/;s/\\/-/;s/---/-/')
