@@ -18,21 +18,22 @@ SUBJECT="ARK Mod-ID failure detected on $(hostname)"
 
 CURRENT_UPDATER_VERSION="1.4"
 ARK_APP_ID="346110"
-STEAM_MASTER_PATH="/home/$MASTERSERVER_USER/masterserver/steamCMD"
-STEAM_CMD_PATH="$STEAM_MASTER_PATH/steamcmd.sh"
-STEAM_CONTENT_PATH="$STEAM_MASTER_PATH/steamapps/workshop/content/$ARK_APP_ID"
-STEAM_DOWNLOAD_PATH="$STEAM_MASTER_PATH/steamapps/workshop/downloads/$ARK_APP_ID"
-ARK_MOD_PATH="/home/$MASTERSERVER_USER/masteraddons"
-LOG_PATH="/home/"$MASTERSERVER_USER"/logs"
-MOD_LOG=""$LOG_PATH"/ark_mod_id.log"
-MOD_BACKUP_LOG=""$LOG_PATH"/ark_mod_id_backup.log"
+MASTER_PATH="/home/$MASTERSERVER_USER"
+STEAM_CMD_PATH="$MASTER_PATH/masterserver/steamCMD/steamcmd.sh"
+STEAM_WORKSHOP_PATH="$MASTER_PATH/Steam/steamapps/workshop"
+STEAM_CONTENT_PATH="$STEAM_WORKSHOP_PATH/content/$ARK_APP_ID"
+STEAM_DOWNLOAD_PATH="$STEAM_WORKSHOP_PATH/downloads/$ARK_APP_ID"
+ARK_MOD_PATH="$MASTER_PATH/masteraddons"
+LOG_PATH="$MASTER_PATH/logs"
+MOD_LOG="$LOG_PATH/ark_mod_id.log"
+MOD_BACKUP_LOG="$LOG_PATH/ark_mod_id_backup.log"
 INSTALL_LOG=""$LOG_PATH"/ark_mod_update_status_$(date +"%d-%m-%Y").log"
 DEPRECATED_LOG=""$LOG_PATH"/ark_mod_deprecated_$(date +"%d-%m-%Y").log"
-MOD_NO_UPDATE_LOG=""$LOG_PATH"/ark_mod_id_no_update.log"
-MOD_LAST_VERSION="/home/"$MASTERSERVER_USER"/versions"
-TMP_PATH="/home/"$MASTERSERVER_USER"/temp"
+MOD_NO_UPDATE_LOG="$LOG_PATH/ark_mod_id_no_update.log"
+MOD_LAST_VERSION="$MASTER_PATH/versions"
+TMP_PATH="$MASTER_PATH/temp"
 EMAIL_MESSAGE=""$TMP_PATH"/emailmessage.txt"
-DEAD_MOD="depreciated|deprecated|outdated|brocken|not-supported|mod-is-dead|no-longer-|old|discontinued"
+DEAD_MOD="deprec|outdated|brocken|not-supported|mod-is-dead|no-longer-|old|discontinued"
 ARK_LOCAL_DATE=$(LANG=en_us_88591 date -d "1 day ago" +"%d %b" | sed 's/^0*//')
 
 PRE_CHECK() {
@@ -47,12 +48,12 @@ PRE_CHECK() {
 		fi
 
 		if [ ! -d "$ARK_MOD_PATH" ]; then
-			FAILURE_MESSAGE='Masteraddons Directory "/home/'$MASTERSERVER_USER'/masteraddons" not found!'
+			FAILURE_MESSAGE='Masteraddons Directory "$ARK_MOD_PATH" not found!'
 			TMP_FAILURE_EMAIL
 		fi
 
 		if [ ! -f "$STEAM_CMD_PATH" ]; then
-			FAILURE_MESSAGE='Steam Installation "/home/'$MASTERSERVER_USER'/masterserver/steamCMD/steamcmd.sh" found!'
+			FAILURE_MESSAGE='Steam Installation "$STEAM_CMD_PATH" found!'
 			TMP_FAILURE_EMAIL
 		fi
 	else
@@ -64,8 +65,8 @@ PRE_CHECK() {
 	LATEST_UPDATER_VERSION=`wget -q --timeout=60 -O - https://api.github.com/repos/Lacrimosa99/Easy-WI-ARK-Mod-Updater/releases/latest | grep -Po '(?<="tag_name": ")([0-9]\.[0-9])'`
 	if [ "`printf "${LATEST_UPDATER_VERSION}\n${CURRENT_UPDATER_VERSION}" | sort -V | tail -n 1`" != "$CURRENT_UPDATER_VERSION" ]; then
 		echo >> "$INSTALL_LOG"
-		echo "You are using a old ark mod updater script version ${CURRENT_UPDATER_VERSION}."	| tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
-		echo "Please upgrade to version ${LATEST_UPDATER_VERSION} over the ark_mod_manager.sh script and retry." | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
+		echo "You are using a old ARK Mod Updater Script Version ${CURRENT_UPDATER_VERSION}."	| tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
+		echo "Please upgrade to Version ${LATEST_UPDATER_VERSION} over the ark_mod_manager.sh Script and retry." | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
 		echo "Updater worked currently, but all script fixes and script updates are currently not available." | tee -a "$INSTALL_LOG" "$EMAIL_MESSAGE"
 	fi
 
@@ -161,7 +162,7 @@ INSTALL_CHECK() {
 
 					RESULT=$(su "$MASTERSERVER_USER" -c "$STEAM_CMD_PATH +login anonymous +workshop_download_item $ARK_APP_ID $MODID validate +quit" | egrep "Success" | cut -c 1-7)
 
-					if [ "$RESULT" == "Success" ]; then
+					if [ "$RESULT" == "Success" ] && [ -d "$STEAM_CONTENT_PATH"/"$MODID" ]; then
 						if [ -f "$TMP_PATH"/ark_update_failure.log ]; then
 							TMP_ID=$(cat "$TMP_PATH"/ark_update_failure.log | grep "$MODID")
 							if [ "$TMP_ID" = "" ]; then
@@ -200,7 +201,7 @@ INSTALL_CHECK() {
 							if [ "$TMP_ID" = "" ]; then
 								echo "$MODID" >> "$TMP_PATH"/ark_update_failure.log
 							fi
-							sed -i "/$MODID/d" "$TMP_PATH"/ark_custom_appid_tmp.log
+							sed -i "/$MODID/d" "$TMP_PATH"/ark_custom_appid_tmp.log >/dev/null 2>&1
 							break
 						else
 							rm -rf $STEAM_CONTENT_PATH/*
@@ -226,7 +227,7 @@ INSTALL_CHECK() {
 							echo "$MODID" >> "$MOD_LOG"
 						fi
 						chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$ARK_MOD_PATH"/ark_"$MODID" 2>&1 >/dev/null
-						sed -i "/$MODID/d" "$TMP_PATH"/ark_custom_appid_tmp.log
+						sed -i "/$MODID/d" "$TMP_PATH"/ark_custom_appid_tmp.log >/dev/null 2>&1
 						echo "$ARK_LAST_CHANGES_DATE" > ""$MOD_LAST_VERSION"/ark_mod_id_"$MODID".txt"
 						chown -cR "$MASTERSERVER_USER":"$MASTERSERVER_USER" "$MOD_LAST_VERSION" 2>&1 >/dev/null
 					else
@@ -358,9 +359,7 @@ DECOMPRESS() {
 }
 
 CLEANFILES() {
-	rm -rf "$STEAM_CONTENT_PATH"
-	rm -rf "$STEAM_DOWNLOAD_PATH"
-	rm -rf "$STEAM_MASTER_PATH"/steamapps/workshop
+	rm -rf "$STEAM_WORKSHOP_PATH"
 }
 
 FINISHED() {
