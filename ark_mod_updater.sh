@@ -8,7 +8,7 @@ MASTERSERVER_USER="unknown_user"
 
 # E-Mail Modul for Autoupdater
 # deactivate E-Mail Support with empty EMAIL_TO Field
-EMAIL_TO=
+EMAIL_TO=""
 SUBJECT="ARK Mod-ID failure detected on $(hostname)"
 
 
@@ -20,9 +20,6 @@ CURRENT_UPDATER_VERSION="1.5"
 ARK_APP_ID="346110"
 MASTER_PATH="/home/$MASTERSERVER_USER"
 STEAM_CMD_PATH="$MASTER_PATH/masterserver/steamCMD/steamcmd.sh"
-STEAM_WORKSHOP_PATH="$MASTER_PATH/Steam/steamapps/workshop"
-STEAM_CONTENT_PATH="$STEAM_WORKSHOP_PATH/content/$ARK_APP_ID"
-STEAM_DOWNLOAD_PATH="$STEAM_WORKSHOP_PATH/downloads/$ARK_APP_ID"
 ARK_MOD_PATH="$MASTER_PATH/masteraddons"
 LOG_PATH="$MASTER_PATH/logs"
 MOD_LOG="$LOG_PATH/ark_mod_id.log"
@@ -155,12 +152,16 @@ INSTALL_CHECK() {
 
 				COUNTER=0
 				while [ $COUNTER -lt 4 ]; do
-					if [ ! -d "$STEAM_CONTENT_PATH" -o ! -d "$STEAM_DOWNLOAD_PATH" ]; then
-						su "$MASTERSERVER_USER" -c "mkdir -p "$STEAM_CONTENT_PATH""
-						su "$MASTERSERVER_USER" -c "mkdir -p "$STEAM_DOWNLOAD_PATH""
+					RESULT=$(su "$MASTERSERVER_USER" -c "$STEAM_CMD_PATH +login anonymous +workshop_download_item $ARK_APP_ID $MODID validate +quit" | egrep "Success" | cut -c 1-7)
+
+					if [ -d $MASTER_PATH/Steam/steamapps/workshop/content/$ARK_APP_ID/$MODID ]; then
+						STEAM_WORKSHOP_PATH="$MASTER_PATH/Steam/steamapps/workshop"
+					else
+						STEAM_WORKSHOP_PATH="$MASTER_PATH/masterserver/steamCMD/steamapps/workshop"
 					fi
 
-					RESULT=$(su "$MASTERSERVER_USER" -c "$STEAM_CMD_PATH +login anonymous +workshop_download_item $ARK_APP_ID $MODID validate +quit" | egrep "Success" | cut -c 1-7)
+					STEAM_CONTENT_PATH="$STEAM_WORKSHOP_PATH/content/$ARK_APP_ID"
+					STEAM_DOWNLOAD_PATH="$STEAM_WORKSHOP_PATH/downloads/$ARK_APP_ID"
 
 					if [ "$RESULT" == "Success" ] && [ -d "$STEAM_CONTENT_PATH"/"$MODID" ]; then
 						if [ -f "$TMP_PATH"/ark_update_failure.log ]; then
