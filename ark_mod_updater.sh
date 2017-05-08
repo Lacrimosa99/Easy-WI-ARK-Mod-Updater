@@ -120,7 +120,7 @@ UPDATE() {
 		echo "Update canceled!" >> "$INSTALL_LOG"
 	fi
 
-	if [ -f "$TMP_PATH"/ark_update_failure.log]; then
+	if [ -f "$TMP_PATH"/ark_update_failure.log ]; then
 		SECOND_DOWNLOAD=1
 		rm -rf "$STEAM_WORKSHOP_PATH"
 		sleep 120
@@ -446,7 +446,7 @@ FINISHED() {
 				fi
 				mv "$EMAIL_TMP_MESSAGE" "$EMAIL_MOD_DEPRECATED_LOG"
 			# Download Failure
-			elif [ -f "$TMP_PATH"/ark_update_failure.log ]
+			elif [ -f "$TMP_PATH"/ark_update_failure.log ]; then
 				SEND_EMAIL
 			fi
 			find "$LOG_PATH" -name "ark_mod_emailmessage_*" -mtime +3 -exec rm -rf {} \;
