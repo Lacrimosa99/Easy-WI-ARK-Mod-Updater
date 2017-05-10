@@ -437,7 +437,7 @@ FINISHED() {
 			# Script Outdated
 			elif [ "$EMAIL_SCRIPT_OUTDATED" = "1" -a ! -f "$EMAIL_SCRIPT_OUTDATED_LOG" ]; then
 				SEND_EMAIL
-				mv "$EMAIL_TMP_MESSAGE" "$EMAIL_MOD_DEPRECATED_LOG"
+				mv "$EMAIL_TMP_MESSAGE" "$EMAIL_SCRIPT_OUTDATED_LOG"
 			# Mod Deprecated
 			elif [ "$EMAIL_MOD_DEPRECATED" = "1" ]; then
 				SEND_EMAIL
