@@ -16,7 +16,7 @@ SUBJECT="ARK Mod-ID failure detected on $(hostname)"
 ######## from here nothing change ########
 ##########################################
 
-CURRENT_UPDATER_VERSION="1.7"
+CURRENT_UPDATER_VERSION="1.8"
 ARK_APP_ID="346110"
 MASTER_PATH="/home/$MASTERSERVER_USER"
 STEAM_CMD_PATH="$MASTER_PATH/masterserver/steamCMD/steamcmd.sh"
@@ -34,6 +34,7 @@ EMAIL_SCRIPT_OUTDATED_LOG="$LOG_PATH/ark_mod_outdated_email_$(date +"%d-%m-%Y").
 EMAIL_MOD_DEPRECATED_LOG="$LOG_PATH/ark_mod_deprecated_email_$(date +"%d-%m-%Y").txt"
 EMAIL_MOD_DL_FAILURE_LOG="$LOG_PATH/ark_mod_dl_failure_email_$(date +"%d-%m-%Y").txt"
 DEAD_MOD="deprec|outdated|brocken|not-supported|mod-is-dead|no-longer-|old|discontinued"
+DATABASE_CONFIG="/root/ark_mod_updater_db.conf"
 
 PRE_CHECK() {
 	if [ ! "$MASTERSERVER_USER" = "" ]; then
@@ -250,6 +251,7 @@ INSTALL_CHECK() {
 						echo "Mod $ARK_MOD_NAME_NORMAL with ModID "$MODID" are not more Supported and deactivated for Updater!" >> "$INSTALL_LOG"
 						echo 'You can self deinstall from Disk over the "ark_mod_manager.sh".' >> "$INSTALL_LOG"
 					fi
+					DATABASE_CONNECTION
 				else
 					echo "Mod $ARK_MOD_NAME_NORMAL in the masteraddons Folder has not been installed!" >> "$INSTALL_LOG"
 				fi
@@ -363,6 +365,48 @@ DECOMPRESS() {
 		fi
 
 		echo "$modbranch" >"$moddestdir/.modbranch"
+	fi
+}
+
+DATABASE_CONNECTION() {
+	if [ -f "$DATABASE_CONFIG" ]; then
+		if [ "$DATABASE_CONNECTED" != "Yes" ]; then
+			DATABASE_HOST=$(cat "$DATABASE_CONFIG" | grep "Host:" | cut -c 7-)
+			DATABASE_NAME=$(cat "$DATABASE_CONFIG" | grep "Name:" | cut -c 7-)
+			DATABASE_USER=$(cat "$DATABASE_CONFIG" | grep "User:" | cut -c 7-)
+			DATABASE_PW=$(cat "$DATABASE_CONFIG" | grep "PW:" | cut -c 5-)
+		fi
+
+		if [ "$DATABASE_HOST" == "localhost" -o "$DATABASE_HOST" == "127.0.0.1" -o "$DATABASE_HOST" == "" ]; then
+			if [ "`ps fax | grep 'mysqld' | grep -v 'grep'`" != "" ]; then
+				MYSQL_CONNECT="mysql -u $DATABASE_USER -p$DATABASE_PW -D $DATABASE_NAME"
+			else
+				echo "Database Server not Online!" >> "$INSTALL_LOG" >> "$INSTALL_LOG"
+			fi
+		else
+			MYSQL_CONNECT="mysql -h $DATABASE_HOST -u $DATABASE_USER -p$DATABASE_PW -D $DATABASE_NAME"
+		fi
+
+		$MYSQL_CONNECT -e exit 2> /dev/null
+		ERROR_CODE=$?
+
+		if [ "$ERROR_CODE" == "0" ]; then
+			DATABASE_CONNECTED="Yes"
+			DATABASE_MOD_ID=$($MYSQL_CONNECT -e "SELECT \`id\` FROM \`addons\` WHERE \`addon\` LIKE 'ark_$MODID' ORDER BY \`id\` ASC;" 2> /dev/null | tr -d "id\n")
+			$MYSQL_CONNECT -e "UPDATE \`addons\` SET \`menudescription\` = 'AppID: $MODID - $ARK_MOD_NAME_NORMAL' WHERE \`addons\`.\`id\` = '$DATABASE_MOD_ID';"
+			ERROR_CODE=$?
+
+			if [ "$ERROR_CODE" != "0" ]; then
+				echo "Database Error: Mod Name \"$MODID - $ARK_MOD_NAME_NORMAL\" cannot be updated!" | tee -a "$INSTALL_LOG" "$EMAIL_TMP_MESSAGE"
+			fi
+		else
+			echo "Database Login failed!" | tee -a "$INSTALL_LOG" "$EMAIL_TMP_MESSAGE"
+			echo "Please check your Database Login Data in \"/root/ark_mod_updater_db.conf\"." | tee -a "$INSTALL_LOG" "$EMAIL_TMP_MESSAGE"
+		fi
+	else
+		echo "Database Error: Database Config not found!" | tee -a "$INSTALL_LOG" "$EMAIL_TMP_MESSAGE"
+		echo "Mod Name cannot be updating." | tee -a "$INSTALL_LOG" "$EMAIL_TMP_MESSAGE"
+		echo | tee -a "$INSTALL_LOG" "$EMAIL_TMP_MESSAGE"
 	fi
 }
 
