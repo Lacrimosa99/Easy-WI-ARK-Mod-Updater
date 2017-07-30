@@ -11,14 +11,16 @@ MASTERSERVER_USER="unknown_user"
 EMAIL_TO=""
 SUBJECT="ARK Mod-ID failure detected on $(hostname)"
 
+# Homepath
+EWI_BASE_PATH="home"
 
 ##########################################
 ######## from here nothing change ########
 ##########################################
 
-CURRENT_UPDATER_VERSION="1.8"
+CURRENT_UPDATER_VERSION="1.9"
 ARK_APP_ID="346110"
-MASTER_PATH="/home/$MASTERSERVER_USER"
+MASTER_PATH="/$EWI_BASE_PATH/$MASTERSERVER_USER"
 STEAM_CMD_PATH="$MASTER_PATH/masterserver/steamCMD/steamcmd.sh"
 ARK_MOD_PATH="$MASTER_PATH/masteraddons"
 LOG_PATH="$MASTER_PATH/logs"
