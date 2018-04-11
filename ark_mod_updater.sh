@@ -18,7 +18,7 @@ EWI_BASE_PATH="home"
 ######## from here nothing change ########
 ##########################################
 
-CURRENT_UPDATER_VERSION="1.9"
+CURRENT_UPDATER_VERSION="2.0"
 ARK_APP_ID="346110"
 MASTER_PATH="/$EWI_BASE_PATH/$MASTERSERVER_USER"
 STEAM_CMD_PATH="$MASTER_PATH/masterserver/steamCMD/steamcmd.sh"
