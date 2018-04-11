@@ -137,7 +137,7 @@ UPDATE() {
 
 INSTALL_CHECK() {
 	for MODID in ${ARK_MOD_ID[@]}; do
-		ARK_MOD_NAME_NORMAL=$(curl -s "http://steamcommunity.com/sharedfiles/filedetails/?id=$MODID" | sed -n 's|^.*<div class="workshopItemTitle">\([^<]*\)</div>.*|\1|p')
+		ARK_MOD_NAME_NORMAL=$(curl -s "https://steamcommunity.com/sharedfiles/filedetails/?id=$MODID" | sed -n 's|^.*<div class="workshopItemTitle">\([^<]*\)</div>.*|\1|p')
 		ARK_LAST_CHANGES_DATE=$(curl -s "https://steamcommunity.com/sharedfiles/filedetails/changelog/$MODID" | sed -n 's|^.*Update: \([^<]*\)</div>.*|\1|p' | head -n1 | tr -d ',\t')
 
 		if [ -f "$MOD_LAST_VERSION"/ark_mod_id_"$MODID".txt ]; then
